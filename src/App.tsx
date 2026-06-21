@@ -48,6 +48,8 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          {/* Customer payment is public — no login required for customers */}
+          <Route path="/customer-payment" element={<CustomerPaymentPage />} />
           <Route
             element={
               <RequireAuth>
@@ -57,7 +59,6 @@ export default function App() {
           >
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/generate-qr" element={<GenerateQRPage />} />
-            <Route path="/customer-payment" element={<CustomerPaymentPage />} />
             <Route path="/transactions" element={<TransactionHistoryPage />} />
             <Route path="/screenshot-verify" element={<ScreenshotVerifyPage />} />
             <Route path="/fraud-alerts" element={<FraudMonitoringPage />} />

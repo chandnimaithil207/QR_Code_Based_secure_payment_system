@@ -9,17 +9,34 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { signIn, signUp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!email || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      login(email || 'merchant@secureqr.io');
-      navigate('/dashboard');
-      setLoading(false);
-    }, 800);
+    const { error: authError } = isRegister
+      ? await signUp(email, password)
+      : await signIn(email, password);
+    setLoading(false);
+
+    if (authError) {
+      setError(authError);
+      return;
+    }
+    navigate('/dashboard');
   };
 
   return (
@@ -84,6 +101,12 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {error && (
+              <div className="bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
+                {error}
+              </div>
+            )}
 
             <button
               type="submit"

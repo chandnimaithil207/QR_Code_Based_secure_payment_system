@@ -20,7 +20,7 @@ const navItems = [
 ];
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
 
   return (
     <>
@@ -69,7 +69,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
 
         <div className="p-3 border-t border-surface-700">
           <button
-            onClick={logout}
+            onClick={signOut}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sm font-medium text-gray-400 hover:text-cyber-red hover:bg-cyber-red/10 transition-all duration-200"
           >
             <LogOut className="w-4.5 h-4.5" />

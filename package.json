@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
     "lucide-react": "^1.18.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
