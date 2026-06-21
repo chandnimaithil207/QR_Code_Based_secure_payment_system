@@ -1,12 +1,14 @@
 export type TransactionStatus = 'verified' | 'pending' | 'fraud';
 
 export interface Transaction {
+  id: string;
   orderId: string;
   transactionId: string;
   amount: number;
   status: TransactionStatus;
   timestamp: string;
   merchantName?: string;
+  customerName?: string | null;
 }
 
 export interface QRData {
@@ -15,6 +17,7 @@ export interface QRData {
   merchantName: string;
   amount: number;
   expiryTime: string;
+  used?: boolean;
 }
 
 export interface FraudLog {
@@ -35,6 +38,7 @@ export interface OCRResult {
   transactionId: string;
   amount: string;
   date: string;
+  customerName: string | null;
   verified: boolean;
 }
 

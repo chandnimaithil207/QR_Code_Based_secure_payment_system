@@ -1,32 +1,98 @@
 import { useState, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { QrCode, Download, Copy, Check, Clock, Hash, User, DollarSign } from 'lucide-react';
-import { generateOrderId, generateToken, getExpiryTime } from '../lib/mockData';
-import type { QRData } from '../types';
+import { QrCode, Download, Copy, Check, Clock, Hash, User, DollarSign, Loader2, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../hooks/useAuth';
+
+interface GeneratedQR {
+  id: string;
+  orderId: string;
+  token: string;
+  merchantName: string;
+  amount: number;
+  expiryTime: string;
+}
+
+function generateOrderId(): string {
+  return `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+function generateToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `TKN-${result}`;
+}
+
+function getExpiryTime(minutes: number = 15): string {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + minutes);
+  return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
 export default function GenerateQRPage() {
   const [merchantName, setMerchantName] = useState('');
   const [amount, setAmount] = useState('');
-  const [qrData, setQrData] = useState<QRData | null>(null);
+  const [qrData, setQrData] = useState<GeneratedQR | null>(null);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
+  const { userEmail } = useAuth();
 
-  const handleGenerate = (e: React.FormEvent) => {
+  const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    const parsedAmount = parseFloat(amount);
+    if (!merchantName.trim()) {
+      setError('Merchant name is required.');
+      return;
+    }
+    if (!parsedAmount || parsedAmount <= 0) {
+      setError('A positive amount is required.');
+      return;
+    }
+
     const orderId = generateOrderId();
     const token = generateToken();
+    const expiryTime = getExpiryTime(15);
+
+    setLoading(true);
+    const { data, error: insertError } = await supabase
+      .from('qr_codes')
+      .insert({
+        order_id: orderId,
+        token,
+        merchant_name: merchantName.trim(),
+        amount: parsedAmount,
+        expiry_time: expiryTime,
+      })
+      .select('id')
+      .single();
+
+    setLoading(false);
+
+    if (insertError || !data) {
+      setError(insertError?.message ?? 'Failed to generate QR code.');
+      return;
+    }
+
     setQrData({
+      id: data.id,
       orderId,
       token,
-      merchantName: merchantName || 'Demo Merchant',
-      amount: parseFloat(amount) || 100.00,
-      expiryTime: getExpiryTime(15),
+      merchantName: merchantName.trim(),
+      amount: parsedAmount,
+      expiryTime,
     });
   };
 
   const handleDownload = () => {
     const svg = qrRef.current?.querySelector('svg');
-    if (!svg) return;
+    if (!svg || !qrData) return;
     const svgData = new XMLSerializer().serializeToString(svg);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -40,7 +106,7 @@ export default function GenerateQRPage() {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       }
       const link = document.createElement('a');
-      link.download = `secureqr-${qrData?.orderId || 'code'}.png`;
+      link.download = `secureqr-${qrData.orderId}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     };
@@ -101,14 +167,37 @@ export default function GenerateQRPage() {
               </div>
             </div>
 
+            {error && (
+              <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <QrCode className="w-4 h-4" />
-              Generate QR Code
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <QrCode className="w-4 h-4" />
+                  Generate QR Code
+                </>
+              )}
             </button>
           </form>
+
+          {userEmail && (
+            <p className="text-xs text-gray-600 mt-4 font-mono">
+              Generating as <span className="text-gray-400">{userEmail}</span>
+            </p>
+          )}
         </div>
 
         {/* QR Preview */}
@@ -122,7 +211,7 @@ export default function GenerateQRPage() {
             <div className="text-center">
               <div ref={qrRef} className="inline-block p-4 bg-white rounded-xl mb-4">
                 <QRCodeSVG
-                  value={JSON.stringify(qrData)}
+                  value={qrData.token}
                   size={180}
                   level="H"
                   bgColor="#ffffff"
@@ -154,11 +243,28 @@ export default function GenerateQRPage() {
 
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
                   <div className="flex items-center gap-2">
+                    <DollarSign className="w-3.5 h-3.5 text-cyber-green" />
+                    <span className="text-xs text-gray-400">Amount</span>
+                  </div>
+                  <span className="text-sm font-mono text-cyber-green">
+                    ${qrData.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
+                  <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-cyber-yellow" />
                     <span className="text-xs text-gray-400">Expires At</span>
                   </div>
                   <span className="text-sm font-mono text-cyber-yellow">{qrData.expiryTime}</span>
                 </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-cyber-blue/5 border border-cyber-blue/20 rounded-lg text-left">
+                <p className="text-xs text-gray-400 font-mono">
+                  Share the QR or token with the customer. They open{' '}
+                  <span className="text-cyber-blue">/customer-payment</span> and pay — no login required.
+                </p>
               </div>
 
               <button
