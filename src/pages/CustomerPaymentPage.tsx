@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
-import QrScanner from 'qr-scanner';
-import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Upload, Image as ImageIcon } from 'lucide-react';
+import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { QRData } from '../types';
 
@@ -16,9 +15,46 @@ interface PaymentResult {
   date: string;
 }
 
+// Decode a QR code from an image File using the browser BarcodeDetector API
+// (supported in Chrome 83+, Edge 83+, Android). Falls back to jsQR loaded
+// lazily from CDN on browsers that don't have BarcodeDetector.
+async function decodeQRFromFile(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+
+  // Try native BarcodeDetector first (Chrome/Edge/Android WebView).
+  if ('BarcodeDetector' in window) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+    const barcodes = await detector.detect(bitmap);
+    if (barcodes.length > 0) return barcodes[0].rawValue as string;
+    throw new Error('No QR code found in image.');
+  }
+
+  // Fallback: draw to canvas and decode with jsQR loaded from CDN.
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  // Load jsQR lazily from CDN (only on first use for browsers without BarcodeDetector).
+  if (!(window as any).__jsQR) {
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load QR decoder.'));
+      document.head.appendChild(s);
+    });
+  }
+  const jsQR = (window as any).jsQR as (data: Uint8ClampedArray, width: number, height: number) => { data: string } | null;
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  if (!code) throw new Error('No QR code found in image.');
+  return code.data;
+}
+
 function checkExpiry(expiryTime: string): boolean {
-  // Parse "HH:MM:SS AM/PM" generated client-side (toLocaleTimeString en-US) back to a Date today.
-  const today = new Date();
   const m = expiryTime.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?/i);
   if (!m) return false;
   let hours = parseInt(m[1], 10);
@@ -31,7 +67,7 @@ function checkExpiry(expiryTime: string): boolean {
   }
   const expiry = new Date();
   expiry.setHours(hours, minutes, seconds, 0);
-  return today.getTime() <= expiry.getTime();
+  return Date.now() <= expiry.getTime();
 }
 
 function generateTransactionId(): string {
@@ -55,19 +91,22 @@ export default function CustomerPaymentPage() {
     setError(null);
     setDecoding(true);
     try {
-      const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
-      const decoded = result.data.trim();
+      const decoded = (await decodeQRFromFile(file)).trim();
       if (!decoded.startsWith('TKN-')) {
         setError('That image does not contain a valid SecureQR payment token.');
-        setDecoding(false);
         return;
       }
       setTokenInput(decoded);
-      // Auto-continue with the decoded token.
       await loadByToken(decoded);
-    } catch (err) {
-      console.error('QR decode failed', err);
-      setError('Could not read a QR code from that image. Try typing the token instead.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      if (msg.includes('No QR code found')) {
+        setError('No QR code detected in that image. Try a clearer photo or type the token.');
+      } else if (msg.includes('Failed to load')) {
+        setError('QR decoder could not load. Check your internet connection or type the token.');
+      } else {
+        setError('Could not read a QR code from that image. Try typing the token instead.');
+      }
     } finally {
       setDecoding(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -128,24 +167,13 @@ export default function CustomerPaymentPage() {
     setPhase('paying');
   };
 
-  const logFraud = async (
-    token: string,
-    fraudType: string,
-    description: string,
-  ): Promise<void> => {
-    // We don't know the merchant at this point; find the qr_code by token to attach
-    // the merchant's user_id so RLS lets the insert land in their fraud board.
+  const logFraud = async (token: string, fraudType: string, description: string): Promise<void> => {
     const { data: qr } = await supabase
       .from('qr_codes')
       .select('user_id')
       .eq('token', token)
       .maybeSingle();
-
-    if (!qr) {
-      // No matching merchant — nothing to log against a real record.
-      return;
-    }
-
+    if (!qr) return;
     await supabase.from('fraud_logs').insert({
       transaction_id: token,
       fraud_type: fraudType,
@@ -175,7 +203,6 @@ export default function CustomerPaymentPage() {
       return;
     }
 
-    // Mark QR as used so it can't be replayed.
     await supabase.from('qr_codes').update({ used: true }).eq('token', qrData.token);
 
     setResult({
@@ -211,7 +238,6 @@ export default function CustomerPaymentPage() {
         </div>
 
         <div className="bg-surface-900 border border-surface-700 rounded-xl p-6 space-y-4">
-          {/* Phase: entry — token input */}
           {phase === 'entry' && (
             <>
               <div>
@@ -228,31 +254,29 @@ export default function CustomerPaymentPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-600 mt-2 font-mono">
-                  Paste your token, or upload the QR image to scan it.
+                  Paste your token, or upload the QR image to scan it automatically.
                 </p>
               </div>
 
-              <div className="relative">
-                <input ref={fileRef} type="file" accept="image/*" onChange={handleScanQrImage} className="hidden" />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={decoding}
-                  className="w-full bg-surface-800 hover:bg-surface-700 border border-surface-600 text-gray-300 hover:text-white py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {decoding ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Scanning QR...
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-4 h-4" />
-                      Scan QR from Image
-                    </>
-                  )}
-                </button>
-              </div>
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleScanQrImage} className="hidden" />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={decoding}
+                className="w-full bg-surface-800 hover:bg-surface-700 border border-surface-600 text-gray-300 hover:text-white py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {decoding ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Scanning QR...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="w-4 h-4" />
+                    Scan QR from Image
+                  </>
+                )}
+              </button>
 
               {error && (
                 <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
@@ -272,7 +296,6 @@ export default function CustomerPaymentPage() {
             </>
           )}
 
-          {/* Phase: loading */}
           {phase === 'loading' && (
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="w-8 h-8 border-2 border-cyber-green/30 border-t-cyber-green rounded-full animate-spin mb-3" />
@@ -280,7 +303,6 @@ export default function CustomerPaymentPage() {
             </div>
           )}
 
-          {/* Phase: paying — show details, ask for name, pay */}
           {phase === 'paying' && qrData && (
             <>
               <div className="space-y-3">
@@ -340,7 +362,6 @@ export default function CustomerPaymentPage() {
             </>
           )}
 
-          {/* Phase: success */}
           {phase === 'success' && result && (
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-green/10 border border-cyber-green/30 mb-4">
@@ -387,7 +408,6 @@ export default function CustomerPaymentPage() {
             </div>
           )}
 
-          {/* Phase: rejected */}
           {phase === 'rejected' && rejectReason && (
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-red/10 border border-cyber-red/30 mb-4">
