@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight } from 'lucide-react';
+import { useState, useRef } from 'react';
+import QrScanner from 'qr-scanner';
+import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Upload, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { QRData } from '../types';
 
@@ -45,11 +46,38 @@ export default function CustomerPaymentPage() {
   const [customerName, setCustomerName] = useState('');
   const [result, setResult] = useState<PaymentResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [decoding, setDecoding] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const loadByToken = async () => {
+  const handleScanQrImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setDecoding(true);
+    try {
+      const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
+      const decoded = result.data.trim();
+      if (!decoded.startsWith('TKN-')) {
+        setError('That image does not contain a valid SecureQR payment token.');
+        setDecoding(false);
+        return;
+      }
+      setTokenInput(decoded);
+      // Auto-continue with the decoded token.
+      await loadByToken(decoded);
+    } catch (err) {
+      console.error('QR decode failed', err);
+      setError('Could not read a QR code from that image. Try typing the token instead.');
+    } finally {
+      setDecoding(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const loadByToken = async (override?: string) => {
     setError(null);
     setRejectReason(null);
-    const token = tokenInput.trim();
+    const token = (override ?? tokenInput).trim();
     if (!token) {
       setError('Please enter your payment token.');
       return;
@@ -200,8 +228,30 @@ export default function CustomerPaymentPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-600 mt-2 font-mono">
-                  Enter the token from your merchant's QR code.
+                  Paste your token, or upload the QR image to scan it.
                 </p>
+              </div>
+
+              <div className="relative">
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleScanQrImage} className="hidden" />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={decoding}
+                  className="w-full bg-surface-800 hover:bg-surface-700 border border-surface-600 text-gray-300 hover:text-white py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {decoding ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Scanning QR...
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-4 h-4" />
+                      Scan QR from Image
+                    </>
+                  )}
+                </button>
               </div>
 
               {error && (
@@ -212,7 +262,7 @@ export default function CustomerPaymentPage() {
               )}
 
               <button
-                onClick={loadByToken}
+                onClick={() => loadByToken()}
                 disabled={phase !== 'entry'}
                 className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-3 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2"
               >
