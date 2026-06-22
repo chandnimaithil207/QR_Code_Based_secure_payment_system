@@ -15,13 +15,9 @@ interface PaymentResult {
   date: string;
 }
 
-// Decode a QR code from an image File using the browser BarcodeDetector API
-// (supported in Chrome 83+, Edge 83+, Android). Falls back to jsQR loaded
-// lazily from CDN on browsers that don't have BarcodeDetector.
 async function decodeQRFromFile(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
 
-  // Try native BarcodeDetector first (Chrome/Edge/Android WebView).
   if ('BarcodeDetector' in window) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
@@ -30,7 +26,6 @@ async function decodeQRFromFile(file: File): Promise<string> {
     throw new Error('No QR code found in image.');
   }
 
-  // Fallback: draw to canvas and decode with jsQR loaded from CDN.
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
@@ -38,7 +33,6 @@ async function decodeQRFromFile(file: File): Promise<string> {
   ctx.drawImage(bitmap, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  // Load jsQR lazily from CDN (only on first use for browsers without BarcodeDetector).
   if (!(window as any).__jsQR) {
     await new Promise<void>((resolve, reject) => {
       const s = document.createElement('script');
@@ -52,22 +46,6 @@ async function decodeQRFromFile(file: File): Promise<string> {
   const code = jsQR(imageData.data, imageData.width, imageData.height);
   if (!code) throw new Error('No QR code found in image.');
   return code.data;
-}
-
-function checkExpiry(expiryTime: string): boolean {
-  const m = expiryTime.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)?/i);
-  if (!m) return false;
-  let hours = parseInt(m[1], 10);
-  const minutes = parseInt(m[2], 10);
-  const seconds = parseInt(m[3], 10);
-  if (m[4]) {
-    const ampm = m[4].toUpperCase();
-    if (ampm === 'PM' && hours !== 12) hours += 12;
-    if (ampm === 'AM' && hours === 12) hours = 0;
-  }
-  const expiry = new Date();
-  expiry.setHours(hours, minutes, seconds, 0);
-  return Date.now() <= expiry.getTime();
 }
 
 function generateTransactionId(): string {
@@ -99,13 +77,13 @@ export default function CustomerPaymentPage() {
       setTokenInput(decoded);
       await loadByToken(decoded);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
+      const msg = err instanceof Error ? err.message : '';
       if (msg.includes('No QR code found')) {
         setError('No QR code detected in that image. Try a clearer photo or type the token.');
       } else if (msg.includes('Failed to load')) {
-        setError('QR decoder could not load. Check your internet connection or type the token.');
+        setError('QR decoder could not load. Check your internet or type the token.');
       } else {
-        setError('Could not read a QR code from that image. Try typing the token instead.');
+        setError('Could not read a QR code. Try typing the token instead.');
       }
     } finally {
       setDecoding(false);
@@ -125,7 +103,7 @@ export default function CustomerPaymentPage() {
     setPhase('loading');
     const { data, error: lookupError } = await supabase
       .from('qr_codes')
-      .select('id, order_id, token, merchant_name, amount, expiry_time, used')
+      .select('id, order_id, token, merchant_name, amount, expires_at, used')
       .eq('token', token)
       .maybeSingle();
 
@@ -149,8 +127,8 @@ export default function CustomerPaymentPage() {
       return;
     }
 
-    if (!checkExpiry(data.expiry_time)) {
-      await logFraud(token, 'Expired QR', `Payment attempted after QR expiry (${data.expiry_time})`);
+    if (new Date(data.expires_at) < new Date()) {
+      await logFraud(token, 'Expired QR', `Payment attempted after QR expiry (${new Date(data.expires_at).toLocaleString()})`);
       setRejectReason('expired');
       setPhase('rejected');
       return;
@@ -161,7 +139,7 @@ export default function CustomerPaymentPage() {
       token: data.token,
       merchantName: data.merchant_name,
       amount: Number(data.amount),
-      expiryTime: data.expiry_time,
+      expiryTime: data.expires_at,
       used: data.used,
     });
     setPhase('paying');
@@ -234,7 +212,7 @@ export default function CustomerPaymentPage() {
             <ScanLine className="w-6 h-6 text-cyber-green" />
           </div>
           <h1 className="text-xl font-bold text-white">SecureQR Payment</h1>
-          <p className="text-xs text-gray-500 mt-1 font-mono">No login required — just enter your token and pay</p>
+          <p className="text-xs text-gray-500 mt-1 font-mono">No login required — scan QR or paste token to pay</p>
         </div>
 
         <div className="bg-surface-900 border border-surface-700 rounded-xl p-6 space-y-4">
@@ -254,7 +232,7 @@ export default function CustomerPaymentPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-600 mt-2 font-mono">
-                  Paste your token, or upload the QR image to scan it automatically.
+                  Paste the token your merchant gave you, or upload the QR image.
                 </p>
               </div>
 
@@ -265,17 +243,10 @@ export default function CustomerPaymentPage() {
                 disabled={decoding}
                 className="w-full bg-surface-800 hover:bg-surface-700 border border-surface-600 text-gray-300 hover:text-white py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {decoding ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Scanning QR...
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="w-4 h-4" />
-                    Scan QR from Image
-                  </>
-                )}
+                {decoding
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Scanning QR...</>
+                  : <><ImageIcon className="w-4 h-4" />Scan QR from Image</>
+                }
               </button>
 
               {error && (
@@ -287,11 +258,9 @@ export default function CustomerPaymentPage() {
 
               <button
                 onClick={() => loadByToken()}
-                disabled={phase !== 'entry'}
                 className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-3 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2"
               >
-                Continue
-                <ArrowRight className="w-4 h-4" />
+                Continue <ArrowRight className="w-4 h-4" />
               </button>
             </>
           )}
@@ -367,8 +336,10 @@ export default function CustomerPaymentPage() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-green/10 border border-cyber-green/30 mb-4">
                 <CheckCircle2 className="w-8 h-8 text-cyber-green" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-1">Payment Successful</h2>
-              <p className="text-xs text-gray-500 font-mono mb-5">Save your transaction ID as your receipt</p>
+              <h2 className="text-xl font-bold text-white mb-1">Payment Successful!</h2>
+              <p className="text-xs text-gray-500 font-mono mb-5">
+                Take a screenshot of this screen and share it with the merchant as your payment receipt.
+              </p>
 
               <div className="space-y-3 text-left mb-5">
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
@@ -380,29 +351,29 @@ export default function CustomerPaymentPage() {
                   <span className="text-sm text-white">{result.merchantName}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
-                  <span className="text-xs text-gray-400">Amount</span>
+                  <span className="text-xs text-gray-400">Amount Paid</span>
                   <span className="text-sm font-mono text-cyber-green">
                     ${result.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
-                  <span className="text-xs text-gray-400">Customer</span>
+                  <span className="text-xs text-gray-400">Customer Name</span>
                   <span className="text-sm text-white">{result.customerName}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
-                  <span className="text-xs text-gray-400">Date</span>
+                  <span className="text-xs text-gray-400">Date & Time</span>
                   <span className="text-xs font-mono text-gray-300">{result.date}</span>
                 </div>
               </div>
 
-              <p className="text-xs text-cyber-blue font-mono mb-4 px-3 py-2 bg-cyber-blue/5 border border-cyber-blue/20 rounded-lg">
-                Share your Transaction ID with the merchant for screenshot verification.
-              </p>
+              <div className="bg-cyber-blue/5 border border-cyber-blue/20 rounded-lg p-3 mb-5 text-left">
+                <p className="text-xs text-cyber-blue font-mono font-semibold mb-1">Next step for you:</p>
+                <p className="text-xs text-gray-400 font-mono">
+                  Screenshot this page and send it to your merchant. They will verify it using the Transaction ID shown above.
+                </p>
+              </div>
 
-              <button
-                onClick={reset}
-                className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200"
-              >
+              <button onClick={reset} className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200">
                 Done
               </button>
             </div>
@@ -420,22 +391,15 @@ export default function CustomerPaymentPage() {
                 {rejectReason === 'fraud' && 'Payment Rejected'}
               </h2>
               <p className="text-xs text-gray-500 font-mono mb-5">
-                {rejectReason === 'invalid' && 'The token you entered does not exist or is malformed.'}
-                {rejectReason === 'expired' && 'Please ask the merchant for a fresh QR code.'}
-                {rejectReason === 'used' && 'A QR code can only be used once for your security.'}
+                {rejectReason === 'invalid' && 'This token does not exist. Check you copied it correctly.'}
+                {rejectReason === 'expired' && 'This QR has expired. Ask your merchant to generate a new one.'}
+                {rejectReason === 'used' && 'This QR has already been paid. Each QR can only be used once.'}
                 {rejectReason === 'fraud' && 'This payment was flagged by the fraud monitoring system.'}
               </p>
-
               <div className="bg-cyber-red/5 border border-cyber-red/20 rounded-lg p-3 mb-5 text-left">
-                <p className="text-xs text-gray-500 font-mono">
-                  This attempt has been logged for fraud monitoring.
-                </p>
+                <p className="text-xs text-gray-500 font-mono">This attempt has been logged for the merchant's fraud monitor.</p>
               </div>
-
-              <button
-                onClick={reset}
-                className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200"
-              >
+              <button onClick={reset} className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200">
                 Try Another Token
               </button>
             </div>

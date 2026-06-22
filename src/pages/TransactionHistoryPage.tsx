@@ -1,67 +1,139 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, ArrowLeftRight, Loader2, AlertCircle } from 'lucide-react';
-import StatusBadge from '../components/StatusBadge';
+import { Search, Filter, ArrowLeftRight, Loader2, AlertCircle, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import type { TransactionStatus } from '../types';
 
-interface TransactionRow {
-  transaction_id: string;
-  order_id: string;
+type RowStatus = 'verified' | 'pending' | 'fraud' | 'expired';
+
+interface UnifiedRow {
+  key: string;
+  orderId: string;
+  transactionId: string | null;
+  customerName: string | null;
   amount: number;
-  status: TransactionStatus;
-  customer_name: string | null;
-  created_at: string;
+  status: RowStatus;
+  date: string;
+  source: 'qr' | 'transaction';
+}
+
+function StatusPill({ status }: { status: RowStatus }) {
+  const map: Record<RowStatus, { label: string; className: string }> = {
+    verified: { label: 'Verified', className: 'bg-cyber-green/15 text-cyber-green border border-cyber-green/30' },
+    pending:  { label: 'Pending',  className: 'bg-cyber-yellow/15 text-cyber-yellow border border-cyber-yellow/30' },
+    fraud:    { label: 'Fraud',    className: 'bg-cyber-red/15 text-cyber-red border border-cyber-red/30' },
+    expired:  { label: 'Expired',  className: 'bg-gray-700/50 text-gray-400 border border-gray-700' },
+  };
+  const { label, className } = map[status];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${className}`}>
+      {status === 'verified' && <CheckCircle2 className="w-3 h-3" />}
+      {status === 'pending'  && <Clock className="w-3 h-3" />}
+      {status === 'fraud'    && <XCircle className="w-3 h-3" />}
+      {status === 'expired'  && <XCircle className="w-3 h-3" />}
+      {label}
+    </span>
+  );
 }
 
 export default function TransactionHistoryPage() {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<TransactionStatus | 'all'>('all');
-  const [rows, setRows] = useState<TransactionRow[]>([]);
+  const [filter, setFilter] = useState<RowStatus | 'all'>('all');
+  const [rows, setRows] = useState<UnifiedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data, error: queryError } = await supabase
-        .from('transactions')
-        .select('transaction_id, order_id, amount, status, customer_name, created_at')
-        .order('created_at', { ascending: false });
 
-      if (queryError) {
-        setError(queryError.message);
-        setRows([]);
-      } else {
-        setRows((data ?? []) as TransactionRow[]);
-        setError(null);
-      }
+      const [txRes, qrRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('transaction_id, order_id, amount, status, customer_name, created_at')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('qr_codes')
+          .select('id, order_id, amount, used, expires_at, created_at')
+          .order('created_at', { ascending: false }),
+      ]);
+
+      if (txRes.error) { setError(txRes.error.message); setLoading(false); return; }
+
+      const txRows = txRes.data ?? [];
+      const qrRows = qrRes.data ?? [];
+
+      // Build a set of order_ids that already have a transaction.
+      const paidOrderIds = new Set(txRows.map(t => t.order_id));
+
+      // Transaction rows.
+      const transactionItems: UnifiedRow[] = txRows.map(t => ({
+        key: t.transaction_id,
+        orderId: t.order_id,
+        transactionId: t.transaction_id,
+        customerName: t.customer_name,
+        amount: Number(t.amount),
+        status: t.status as RowStatus,
+        date: t.created_at,
+        source: 'transaction',
+      }));
+
+      // QR rows that don't yet have a transaction (pending or expired).
+      const now = new Date();
+      const pendingItems: UnifiedRow[] = (qrRows as { id: string; order_id: string; amount: number; used: boolean; expires_at: string; created_at: string }[])
+        .filter(q => !paidOrderIds.has(q.order_id))
+        .map(q => ({
+          key: `qr-${q.id}`,
+          orderId: q.order_id,
+          transactionId: null,
+          customerName: null,
+          amount: Number(q.amount),
+          status: new Date(q.expires_at) < now ? 'expired' : 'pending',
+          date: q.created_at,
+          source: 'qr',
+        }));
+
+      setRows([...transactionItems, ...pendingItems].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      ));
+      setError(null);
       setLoading(false);
     };
     load();
   }, []);
 
-  const filters: { value: TransactionStatus | 'all'; label: string }[] = [
-    { value: 'all', label: 'All' },
+  const filters: { value: RowStatus | 'all'; label: string }[] = [
+    { value: 'all',      label: 'All' },
     { value: 'verified', label: 'Verified' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'fraud', label: 'Fraud' },
+    { value: 'pending',  label: 'Pending' },
+    { value: 'expired',  label: 'Expired' },
+    { value: 'fraud',    label: 'Fraud' },
   ];
 
-  const filtered = rows.filter(tx => {
+  const filtered = rows.filter(row => {
     const q = search.toLowerCase();
     const matchesSearch =
-      tx.order_id.toLowerCase().includes(q) ||
-      tx.transaction_id.toLowerCase().includes(q) ||
-      (tx.customer_name?.toLowerCase().includes(q) ?? false);
-    const matchesFilter = filter === 'all' || tx.status === filter;
-    return matchesSearch && matchesFilter;
+      row.orderId.toLowerCase().includes(q) ||
+      (row.transactionId?.toLowerCase().includes(q) ?? false) ||
+      (row.customerName?.toLowerCase().includes(q) ?? false);
+    return matchesSearch && (filter === 'all' || row.status === filter);
   });
+
+  const counts = rows.reduce<Record<string, number>>((a, r) => { a[r.status] = (a[r.status] ?? 0) + 1; return a; }, {});
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl lg:text-2xl font-bold text-white">Transaction History</h1>
-        <p className="text-sm text-gray-500 mt-1 font-mono">Search and filter all transactions</p>
+        <p className="text-sm text-gray-500 mt-1 font-mono">All QR codes and completed payments — pending = QR generated, not yet paid</p>
+      </div>
+
+      {/* Status summary pills */}
+      <div className="flex flex-wrap gap-2">
+        {(['verified', 'pending', 'expired', 'fraud'] as RowStatus[]).map(s => (
+          <div key={s} className="flex items-center gap-2 px-3 py-1.5 bg-surface-900 border border-surface-700 rounded-lg">
+            <StatusPill status={s} />
+            <span className="text-sm font-mono text-white">{counts[s] ?? 0}</span>
+          </div>
+        ))}
       </div>
 
       <div className="bg-surface-900 border border-surface-700 rounded-xl p-4">
@@ -76,7 +148,7 @@ export default function TransactionHistoryPage() {
               className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-blue/50 focus:ring-1 focus:ring-cyber-blue/30 transition-all"
             />
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Filter className="w-4 h-4 text-gray-500 hidden sm:block" />
             {filters.map(f => (
               <button
@@ -99,9 +171,9 @@ export default function TransactionHistoryPage() {
         <div className="flex items-center justify-between p-4 border-b border-surface-700">
           <div className="flex items-center gap-2">
             <ArrowLeftRight className="w-4 h-4 text-cyber-blue" />
-            <span className="text-sm font-semibold text-white">{filtered.length} Transactions</span>
+            <span className="text-sm font-semibold text-white">{filtered.length} rows</span>
           </div>
-          <span className="text-xs font-mono text-gray-500">Live sync</span>
+          <span className="text-xs font-mono text-gray-500">Live data</span>
         </div>
 
         {loading ? (
@@ -127,24 +199,30 @@ export default function TransactionHistoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(tx => (
-                  <tr key={tx.transaction_id} className="border-b border-surface-800 hover:bg-surface-800/50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-cyber-blue">{tx.order_id}</td>
-                    <td className="px-4 py-3 font-mono text-gray-300">{tx.transaction_id}</td>
-                    <td className="px-4 py-3 text-gray-300">{tx.customer_name ?? '—'}</td>
-                    <td className="px-4 py-3 font-mono text-white">
-                      ${Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                {filtered.map(row => (
+                  <tr key={row.key} className="border-b border-surface-800 hover:bg-surface-800/50 transition-colors">
+                    <td className="px-4 py-3 font-mono text-cyber-blue">{row.orderId}</td>
+                    <td className="px-4 py-3 font-mono text-gray-300">
+                      {row.transactionId ?? <span className="text-gray-600 italic">—</span>}
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={tx.status} /></td>
+                    <td className="px-4 py-3 text-gray-300">
+                      {row.customerName ?? <span className="text-gray-600 italic">—</span>}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-white">
+                      ${row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-3"><StatusPill status={row.status} /></td>
                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                      {new Date(tx.created_at).toLocaleString('en-US')}
+                      {new Date(row.date).toLocaleString('en-US')}
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-8 text-gray-600">
-                      No transactions yet. Generate a QR code and have a customer pay.
+                      {rows.length === 0
+                        ? 'No QR codes generated yet. Go to Generate QR to create one.'
+                        : 'No rows match that filter.'}
                     </td>
                   </tr>
                 )}

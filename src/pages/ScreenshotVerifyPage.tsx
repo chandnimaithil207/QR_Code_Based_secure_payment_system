@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Eye, Hash, DollarSign, User, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, AlertCircle, Info } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { OCRResult } from '../types';
 
@@ -14,33 +14,23 @@ export default function ScreenshotVerifyPage() {
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setImage(ev.target?.result as string);
-        setOcrResult(null);
-        setError(null);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setImage(ev.target?.result as string);
+      setOcrResult(null);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleVerify = async () => {
     setError(null);
     setOcrResult(null);
 
-    if (!transactionId.trim()) {
-      setError('Enter the Transaction ID shown on the screenshot.');
-      return;
-    }
-    if (!submittedAmount.trim()) {
-      setError('Enter the amount shown on the screenshot.');
-      return;
-    }
-    if (!image) {
-      setError('Upload the payment screenshot first.');
-      return;
-    }
+    if (!transactionId.trim()) { setError('Enter the Transaction ID from the customer\'s screenshot.'); return; }
+    if (!submittedAmount.trim()) { setError('Enter the amount shown on the screenshot.'); return; }
+    if (!image) { setError('Upload the customer\'s payment receipt screenshot first.'); return; }
 
     setAnalyzing(true);
 
@@ -53,20 +43,18 @@ export default function ScreenshotVerifyPage() {
       .eq('transaction_id', transactionId.trim())
       .maybeSingle();
 
-    // Record the verification attempt irrespective of outcome.
+    const matched = !!tx && !isNaN(parsedAmount) && Math.abs(Number(tx.amount) - parsedAmount) < 0.01 && tx.status === 'verified';
+
     await supabase.from('screenshot_verifications').insert({
       transaction_id: transactionId.trim(),
       submitted_amount: submittedAmount.trim(),
-      matched: !!tx && !isNaN(parsedAmount) && Math.abs(Number(tx.amount) - parsedAmount) < 0.01,
+      matched,
       customer_name: tx?.customer_name ?? null,
     });
 
     setAnalyzing(false);
 
-    if (lookupError) {
-      setError('Could not reach the verification service.');
-      return;
-    }
+    if (lookupError) { setError('Could not reach the verification service.'); return; }
 
     if (!tx) {
       setOcrResult({
@@ -80,14 +68,13 @@ export default function ScreenshotVerifyPage() {
     }
 
     const amountMatches = !isNaN(parsedAmount) && Math.abs(Number(tx.amount) - parsedAmount) < 0.01;
-    const isVerified = amountMatches && tx.status === 'verified';
 
     setOcrResult({
       transactionId: tx.transaction_id,
       amount: Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }),
       date: new Date(tx.created_at).toLocaleString('en-US'),
       customerName: tx.customer_name,
-      verified: isVerified,
+      verified: amountMatches && tx.status === 'verified',
     });
   };
 
@@ -103,16 +90,30 @@ export default function ScreenshotVerifyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl lg:text-2xl font-bold text-white">Screenshot Verification</h1>
-        <p className="text-sm text-gray-500 mt-1 font-mono">Match screenshots against server transaction records</p>
+        <h1 className="text-xl lg:text-2xl font-bold text-white">Screenshot Verify</h1>
+        <p className="text-sm text-gray-500 mt-1 font-mono">Verify a customer's payment receipt against server records</p>
+      </div>
+
+      {/* How-it-works banner */}
+      <div className="bg-cyber-blue/5 border border-cyber-blue/20 rounded-xl p-4 flex gap-3">
+        <Info className="w-4 h-4 text-cyber-blue shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-cyber-blue">What to upload here</p>
+          <p className="text-xs text-gray-400 font-mono leading-relaxed">
+            When a customer pays via <span className="text-white">/customer-payment</span>, they land on a success screen showing their
+            Transaction ID, amount, and your merchant name. They take a screenshot of that screen and share it with you.
+            You upload <span className="text-white">that screenshot</span> here — not the original QR image.
+            Then type in the Transaction ID and amount you can read from their screenshot, and click Verify.
+          </p>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Upload + input section */}
+        {/* Upload + inputs */}
         <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
           <div className="flex items-center gap-2 mb-5">
             <Upload className="w-4 h-4 text-cyber-blue" />
-            <span className="text-xs font-mono text-cyber-blue uppercase tracking-widest">Payment Screenshot</span>
+            <span className="text-xs font-mono text-cyber-blue uppercase tracking-widest">Customer's Receipt Screenshot</span>
           </div>
 
           {!image ? (
@@ -121,14 +122,14 @@ export default function ScreenshotVerifyPage() {
               className="border-2 border-dashed border-surface-600 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-blue/40 hover:bg-surface-800/50 transition-all duration-300"
             >
               <FileImage className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-sm text-gray-400 mb-1">Click to upload payment screenshot</p>
+              <p className="text-sm text-gray-400 mb-1">Upload the customer's payment receipt screenshot</p>
               <p className="text-xs text-gray-600 font-mono">PNG, JPG up to 5MB</p>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="relative rounded-lg overflow-hidden border border-surface-700">
-                <img src={image} alt="Screenshot" className="w-full max-h-64 object-contain bg-surface-800" />
+                <img src={image} alt="Receipt screenshot" className="w-full max-h-64 object-contain bg-surface-800" />
                 {analyzing && (
                   <div className="absolute inset-0 overflow-hidden">
                     <div className="absolute inset-x-0 h-0.5 bg-cyber-blue/60 animate-scan-line" />
@@ -136,13 +137,12 @@ export default function ScreenshotVerifyPage() {
                   </div>
                 )}
               </div>
-
               <div className="flex gap-2">
                 <button
                   onClick={() => { setOcrResult(null); fileRef.current?.click(); }}
-                  className="px-4 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-sm hover:text-white hover:border-surface-500 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-xs hover:text-white hover:border-surface-500 transition-all"
                 >
-                  <Eye className="w-4 h-4" /> Change
+                  Change Image
                 </button>
                 <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
               </div>
@@ -152,7 +152,9 @@ export default function ScreenshotVerifyPage() {
           {image && (
             <div className="space-y-4 mt-5 pt-5 border-t border-surface-700">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Transaction ID (from screenshot)</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Transaction ID <span className="text-gray-600">(read from the screenshot)</span>
+                </label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -166,7 +168,9 @@ export default function ScreenshotVerifyPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount (from screenshot)</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Amount Paid <span className="text-gray-600">(read from the screenshot)</span>
+                </label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -192,17 +196,10 @@ export default function ScreenshotVerifyPage() {
                   disabled={analyzing}
                   className="w-full bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-semibold py-2.5 rounded-lg text-sm hover:bg-cyber-blue/20 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {analyzing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    <>
-                      <ScanLine className="w-4 h-4" />
-                      Verify Against Server
-                    </>
-                  )}
+                  {analyzing
+                    ? <><Loader2 className="w-4 h-4 animate-spin" />Verifying...</>
+                    : <><ScanLine className="w-4 h-4" />Verify Against Server Records</>
+                  }
                 </button>
               ) : (
                 <button
@@ -216,28 +213,37 @@ export default function ScreenshotVerifyPage() {
           )}
         </div>
 
-        {/* Results section */}
+        {/* Results */}
         <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
           <div className="flex items-center gap-2 mb-5">
             <ScanLine className="w-4 h-4 text-cyber-green" />
-            <span className="text-xs font-mono text-cyber-green uppercase tracking-widest">Server Records</span>
+            <span className="text-xs font-mono text-cyber-green uppercase tracking-widest">Server Verification Result</span>
           </div>
 
           {ocrResult ? (
             <div className="space-y-4">
-              <div className="space-y-3">
-                <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">Matched Transaction</h3>
+              <div className="space-y-2.5">
+                <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">Record from Server</h3>
                 <div className="p-3 bg-surface-800 rounded-lg flex items-center justify-between">
-                  <span className="text-xs text-gray-400">Transaction ID</span>
+                  <div className="flex items-center gap-2">
+                    <Hash className="w-3.5 h-3.5 text-cyber-blue" />
+                    <span className="text-xs text-gray-400">Transaction ID</span>
+                  </div>
                   <span className="text-sm font-mono text-cyber-blue">{ocrResult.transactionId}</span>
                 </div>
                 <div className="p-3 bg-surface-800 rounded-lg flex items-center justify-between">
-                  <span className="text-xs text-gray-400">Amount</span>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-3.5 h-3.5 text-cyber-green" />
+                    <span className="text-xs text-gray-400">Amount (server)</span>
+                  </div>
                   <span className="text-sm font-mono text-white">${ocrResult.amount}</span>
                 </div>
                 <div className="p-3 bg-surface-800 rounded-lg flex items-center justify-between">
-                  <span className="text-xs text-gray-400">Customer Name</span>
-                  <span className="text-sm font-mono text-white">{ocrResult.customerName ?? '—'}</span>
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-gray-500" />
+                    <span className="text-xs text-gray-400">Customer Name</span>
+                  </div>
+                  <span className="text-sm text-white">{ocrResult.customerName ?? '—'}</span>
                 </div>
                 <div className="p-3 bg-surface-800 rounded-lg flex items-center justify-between">
                   <span className="text-xs text-gray-400">Payment Date</span>
@@ -253,14 +259,20 @@ export default function ScreenshotVerifyPage() {
                 {ocrResult.verified ? (
                   <>
                     <CheckCircle2 className="w-10 h-10 text-cyber-green mx-auto mb-2" />
-                    <h3 className="text-lg font-bold text-cyber-green">Verified</h3>
-                    <p className="text-xs text-gray-400 mt-1 font-mono">Screenshot matches server records</p>
+                    <h3 className="text-lg font-bold text-cyber-green">Payment Verified</h3>
+                    <p className="text-xs text-gray-400 mt-1 font-mono">
+                      Transaction ID and amount match server records
+                    </p>
                   </>
                 ) : (
                   <>
                     <XCircle className="w-10 h-10 text-cyber-red mx-auto mb-2" />
                     <h3 className="text-lg font-bold text-cyber-red">Mismatch Detected</h3>
-                    <p className="text-xs text-gray-400 mt-1 font-mono">Screenshot data does not match server records</p>
+                    <p className="text-xs text-gray-400 mt-1 font-mono">
+                      {!ocrResult.customerName
+                        ? 'Transaction ID not found in server records'
+                        : 'Amount does not match the server record'}
+                    </p>
                   </>
                 )}
               </div>
@@ -268,14 +280,15 @@ export default function ScreenshotVerifyPage() {
           ) : analyzing ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-12 h-12 border-2 border-cyber-blue/30 border-t-cyber-blue rounded-full animate-spin mb-4" />
-              <p className="text-sm text-cyber-blue font-mono">Querying transactions...</p>
-              <p className="text-xs text-gray-600 mt-1 font-mono">Matching against server records</p>
+              <p className="text-sm text-cyber-blue font-mono">Querying server records...</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-600">
-              <ScanLine className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">Upload a screenshot and enter the transaction ID</p>
-              <p className="text-xs mt-1 font-mono text-gray-700">Server records will appear here</p>
+            <div className="flex flex-col items-center justify-center py-12 text-gray-600 space-y-2">
+              <ScanLine className="w-12 h-12 opacity-30" />
+              <p className="text-sm">Results will appear here</p>
+              <p className="text-xs font-mono text-gray-700 text-center max-w-xs">
+                Upload the customer's receipt screenshot, fill in the Transaction ID and amount, then click Verify
+              </p>
             </div>
           )}
         </div>

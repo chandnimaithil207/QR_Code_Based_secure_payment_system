@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, ArrowLeftRight, ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
+import { ShoppingCart, ArrowLeftRight, ShieldCheck, ShieldAlert, Loader2, Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import StatCard from '../components/StatCard';
 import StatusBadge from '../components/StatusBadge';
@@ -10,6 +10,7 @@ interface DashboardData {
   totalTransactions: number;
   verifiedPayments: number;
   fraudAlerts: number;
+  pendingQRs: number;
   recent: {
     transaction_id: string;
     order_id: string;
@@ -22,7 +23,7 @@ interface DashboardData {
 }
 
 function buildEmptyDashboard(): DashboardData {
-  return { totalOrders: 0, totalTransactions: 0, verifiedPayments: 0, fraudAlerts: 0, recent: [], trend: [] };
+  return { totalOrders: 0, totalTransactions: 0, verifiedPayments: 0, fraudAlerts: 0, pendingQRs: 0, recent: [], trend: [] };
 }
 
 export default function DashboardPage() {
@@ -32,23 +33,33 @@ export default function DashboardPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [txRes, fraudRes] = await Promise.all([
+      const [txRes, fraudRes, qrRes] = await Promise.all([
         supabase
           .from('transactions')
           .select('transaction_id, order_id, amount, status, customer_name, created_at')
           .order('created_at', { ascending: false }),
         supabase.from('fraud_logs').select('id', { count: 'exact', head: true }),
+        supabase
+          .from('qr_codes')
+          .select('order_id, used, expires_at')
+          .eq('used', false),
       ]);
 
       const txRows = (txRes.data ?? []) as DashboardData['recent'];
       const fraudCount = fraudRes.count ?? 0;
+      const qrRows = (qrRes.data ?? []) as { order_id: string; used: boolean; expires_at: string }[];
+
+      // Pending QRs: not used, not expired, and no matching transaction yet.
+      const paidOrderIds = new Set(txRows.map(t => t.order_id));
+      const now = new Date();
+      const pendingQRs = qrRows.filter(
+        q => !paidOrderIds.has(q.order_id) && new Date(q.expires_at) > now
+      ).length;
 
       const orderIds = new Set(txRows.map(t => t.order_id));
       const verified = txRows.filter(t => t.status === 'verified').length;
-      const pending = txRows.filter(t => t.status === 'pending').length;
       const fraudTx = txRows.filter(t => t.status === 'fraud').length;
 
-      // Build last 7-day trend buckets from real created_at dates.
       const buckets: Record<string, { verified: number; pending: number; fraud: number }> = {};
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
@@ -71,6 +82,7 @@ export default function DashboardPage() {
         totalTransactions: txRows.length,
         verifiedPayments: verified,
         fraudAlerts: fraudCount + fraudTx,
+        pendingQRs,
         recent: txRows.slice(0, 8),
         trend,
       });
@@ -94,9 +106,10 @@ export default function DashboardPage() {
         <p className="text-sm text-gray-500 mt-1 font-mono">Real-time payment verification overview</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-        <StatCard title="Total Orders" value={data.totalOrders} icon={<ShoppingCart className="w-4 h-4" />} color="blue" />
-        <StatCard title="Transactions" value={data.totalTransactions} icon={<ArrowLeftRight className="w-4 h-4" />} color="green" />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
+        <StatCard title="QRs Awaiting Payment" value={data.pendingQRs} icon={<Clock className="w-4 h-4" />} color="yellow" />
+        <StatCard title="Total Paid" value={data.totalTransactions} icon={<ShoppingCart className="w-4 h-4" />} color="blue" />
+        <StatCard title="Unique Orders" value={data.totalOrders} icon={<ArrowLeftRight className="w-4 h-4" />} color="blue" />
         <StatCard title="Verified" value={data.verifiedPayments} icon={<ShieldCheck className="w-4 h-4" />} color="green" />
         <StatCard title="Fraud Alerts" value={data.fraudAlerts} icon={<ShieldAlert className="w-4 h-4" />} color="red" />
       </div>
@@ -145,7 +158,7 @@ export default function DashboardPage() {
 
       <div className="bg-surface-900 border border-surface-700 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between p-4 lg:p-5 border-b border-surface-700">
-          <h2 className="text-sm font-semibold text-white">Recent Transactions</h2>
+          <h2 className="text-sm font-semibold text-white">Recent Completed Payments</h2>
           <span className="text-xs font-mono text-cyber-blue">Live Feed</span>
         </div>
         <div className="overflow-x-auto">
@@ -168,15 +181,13 @@ export default function DashboardPage() {
                   <td className="px-4 py-3 text-gray-300">{tx.customer_name ?? '—'}</td>
                   <td className="px-4 py-3 font-mono text-white">${Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                   <td className="px-4 py-3"><StatusBadge status={tx.status} /></td>
-                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                    {new Date(tx.created_at).toLocaleString('en-US')}
-                  </td>
+                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{new Date(tx.created_at).toLocaleString('en-US')}</td>
                 </tr>
               ))}
               {data.recent.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-8 text-gray-600">
-                    No transactions yet.
+                    No completed payments yet. Generate a QR and share it with a customer.
                   </td>
                 </tr>
               )}
