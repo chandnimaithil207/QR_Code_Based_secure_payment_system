@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, AlertCircle, Info } from 'lucide-react';
+import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { OCRResult } from '../types';
 
@@ -91,21 +91,7 @@ export default function ScreenshotVerifyPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl lg:text-2xl font-bold text-white">Screenshot Verify</h1>
-        <p className="text-sm text-gray-500 mt-1 font-mono">Verify a customer's payment receipt against server records</p>
-      </div>
-
-      {/* How-it-works banner */}
-      <div className="bg-cyber-blue/5 border border-cyber-blue/20 rounded-xl p-4 flex gap-3">
-        <Info className="w-4 h-4 text-cyber-blue shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-cyber-blue">What to upload here</p>
-          <p className="text-xs text-gray-400 font-mono leading-relaxed">
-            When a customer pays via <span className="text-white">/customer-payment</span>, they land on a success screen showing their
-            Transaction ID, amount, and your merchant name. They take a screenshot of that screen and share it with you.
-            You upload <span className="text-white">that screenshot</span> here — not the original QR image.
-            Then type in the Transaction ID and amount you can read from their screenshot, and click Verify.
-          </p>
-        </div>
+        <p className="text-sm text-gray-500 mt-1 font-mono">Upload the customer's payment receipt to verify it</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -122,8 +108,8 @@ export default function ScreenshotVerifyPage() {
               className="border-2 border-dashed border-surface-600 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-blue/40 hover:bg-surface-800/50 transition-all duration-300"
             >
               <FileImage className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-sm text-gray-400 mb-1">Upload the customer's payment receipt screenshot</p>
-              <p className="text-xs text-gray-600 font-mono">PNG, JPG up to 5MB</p>
+              <p className="text-sm text-gray-400 mb-1">Upload customer's payment receipt</p>
+              <p className="text-xs text-gray-600 font-mono">The screenshot they sent you after paying</p>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
             </div>
           ) : (
@@ -287,7 +273,7 @@ export default function ScreenshotVerifyPage() {
               <ScanLine className="w-12 h-12 opacity-30" />
               <p className="text-sm">Results will appear here</p>
               <p className="text-xs font-mono text-gray-700 text-center max-w-xs">
-                Upload the customer's receipt screenshot, fill in the Transaction ID and amount, then click Verify
+                Upload the receipt, enter the Transaction ID and amount from it, then verify
               </p>
             </div>
           )}

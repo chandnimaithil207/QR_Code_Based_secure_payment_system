@@ -57,6 +57,7 @@ export default function CustomerPaymentPage() {
   const [phase, setPhase] = useState<Phase>('entry');
   const [rejectReason, setRejectReason] = useState<RejectReason | null>(null);
   const [qrData, setQrData] = useState<QRData | null>(null);
+  const [merchantUserId, setMerchantUserId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [result, setResult] = useState<PaymentResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export default function CustomerPaymentPage() {
     setPhase('loading');
     const { data, error: lookupError } = await supabase
       .from('qr_codes')
-      .select('id, order_id, token, merchant_name, amount, expires_at, used')
+      .select('id, order_id, token, merchant_name, amount, expires_at, used, user_id')
       .eq('token', token)
       .maybeSingle();
 
@@ -135,6 +136,7 @@ export default function CustomerPaymentPage() {
     }
 
     setQrData({
+      id: data.id,
       orderId: data.order_id,
       token: data.token,
       merchantName: data.merchant_name,
@@ -142,6 +144,7 @@ export default function CustomerPaymentPage() {
       expiryTime: data.expires_at,
       used: data.used,
     });
+    setMerchantUserId(data.user_id);
     setPhase('paying');
   };
 
@@ -170,10 +173,12 @@ export default function CustomerPaymentPage() {
     const txId = generateTransactionId();
     const { error: txError } = await supabase.from('transactions').insert({
       transaction_id: txId,
+      qr_code_id: qrData.id,
       order_id: qrData.orderId,
       amount: qrData.amount,
       status: 'verified',
       customer_name: customerName.trim(),
+      user_id: merchantUserId,
     });
 
     if (txError) {

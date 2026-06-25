@@ -182,25 +182,6 @@ export default function GenerateQRPage() {
             </button>
           </form>
 
-          {/* How it works */}
-          <div className="mt-5 pt-5 border-t border-surface-700 space-y-2">
-            <p className="text-xs font-medium text-gray-400">How the flow works</p>
-            <ol className="space-y-1.5">
-              {[
-                'Generate QR → share token or QR image with customer',
-                'Customer opens /customer-payment, scans or pastes token',
-                'Customer clicks Pay Now → gets a receipt with Transaction ID',
-                'Customer screenshots their receipt and shares it with you',
-                'You go to Screenshot Verify → upload their receipt + enter the Transaction ID shown on it',
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-gray-500 font-mono">
-                  <span className="text-cyber-green shrink-0">{i + 1}.</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
           {userEmail && (
             <p className="text-xs text-gray-600 mt-4 font-mono">
               Logged in as <span className="text-gray-400">{userEmail}</span>

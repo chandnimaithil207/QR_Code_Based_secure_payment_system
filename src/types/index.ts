@@ -12,6 +12,7 @@ export interface Transaction {
 }
 
 export interface QRData {
+  id: string;
   orderId: string;
   token: string;
   merchantName: string;
