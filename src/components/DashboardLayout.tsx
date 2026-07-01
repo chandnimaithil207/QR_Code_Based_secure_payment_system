@@ -3,12 +3,10 @@ import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useNotificationProcessor } from '../hooks/useNotifications';
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { userEmail } = useAuth();
-  useNotificationProcessor();
 
   return (
     <div className="min-h-screen bg-surface-950 grid-bg">
