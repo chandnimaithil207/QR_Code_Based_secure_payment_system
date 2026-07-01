@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  user: User | null;
   userEmail: string;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -14,6 +15,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
+  user: null,
   userEmail: '',
   loading: true,
   signUp: async () => ({ error: 'not implemented' }),
@@ -62,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         isAuthenticated: !!session && !!user,
+        user,
         userEmail: user?.email ?? '',
         loading,
         signUp,

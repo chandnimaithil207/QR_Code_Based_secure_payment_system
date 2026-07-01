@@ -9,6 +9,7 @@ import CustomerPaymentPage from './pages/CustomerPaymentPage';
 import TransactionHistoryPage from './pages/TransactionHistoryPage';
 import ScreenshotVerifyPage from './pages/ScreenshotVerifyPage';
 import FraudMonitoringPage from './pages/FraudMonitoringPage';
+import NotificationSettingsPage from './pages/NotificationSettingsPage';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/transactions" element={<TransactionHistoryPage />} />
             <Route path="/screenshot-verify" element={<ScreenshotVerifyPage />} />
             <Route path="/fraud-alerts" element={<FraudMonitoringPage />} />
+            <Route path="/notification-settings" element={<NotificationSettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

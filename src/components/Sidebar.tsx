@@ -7,6 +7,7 @@ import {
   LogOut,
   X,
   ShieldCheck,
+  Bell,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
   { to: '/screenshot-verify', icon: ScanLine, label: 'Screenshot Verify' },
   { to: '/fraud-alerts', icon: ShieldAlert, label: 'Fraud Alerts' },
+  { to: '/notification-settings', icon: Bell, label: 'Notifications' },
 ];
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {

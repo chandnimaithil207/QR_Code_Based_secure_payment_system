@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { QrCode, Download, Copy, Check, Clock, Hash, User, DollarSign, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
+import ProductPresetsManager from '../components/ProductPresetsManager';
 
 interface GeneratedQR {
   id: string;
@@ -10,7 +11,7 @@ interface GeneratedQR {
   token: string;
   merchantName: string;
   amount: number;
-  expiresAt: string; // full ISO timestamp
+  expiresAt: string;
 }
 
 function generateOrderId(): string {
@@ -33,7 +34,27 @@ export default function GenerateQRPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
-  const { userEmail } = useAuth();
+  const { user, userEmail } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      loadMerchantDefaults();
+    }
+  }, [user]);
+
+  const loadMerchantDefaults = async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user?.user_metadata?.merchant_name) {
+      setMerchantName(data.user.user_metadata.merchant_name);
+    }
+    if (data.user?.user_metadata?.default_expiry) {
+      setExpiryMinutes(data.user.user_metadata.default_expiry);
+    }
+  };
+
+  const handlePresetSelect = (_name: string, presetAmount: number) => {
+    setAmount(presetAmount.toString());
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +69,12 @@ export default function GenerateQRPage() {
     const orderId = generateOrderId();
     const token = generateToken();
     const expiresAt = new Date(Date.now() + parsedMinutes * 60 * 1000).toISOString();
+
+    if (user && merchantName.trim()) {
+      await supabase.auth.updateUser({
+        data: { merchant_name: merchantName.trim(), default_expiry: expiryMinutes }
+      });
+    }
 
     setLoading(true);
     const { data, error: insertError } = await supabase
@@ -114,79 +141,83 @@ export default function GenerateQRPage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Form */}
-        <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <QrCode className="w-4 h-4 text-cyber-green" />
-            <span className="text-xs font-mono text-cyber-green uppercase tracking-widest">Configuration</span>
-          </div>
+        <div className="space-y-4">
+          <ProductPresetsManager onSelect={handlePresetSelect} />
 
-          <form onSubmit={handleGenerate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Merchant Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  value={merchantName}
-                  onChange={e => setMerchantName(e.target.value)}
-                  placeholder="Your business or your name"
-                  className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
-                />
-              </div>
+          <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <QrCode className="w-4 h-4 text-cyber-green" />
+              <span className="text-xs font-mono text-cyber-green uppercase tracking-widest">Configuration</span>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount ($)</label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
-                />
+            <form onSubmit={handleGenerate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Merchant Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    value={merchantName}
+                    onChange={e => setMerchantName(e.target.value)}
+                    placeholder="Your business or your name"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Expires In (minutes)</label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="number"
-                  min="1"
-                  max="1440"
-                  value={expiryMinutes}
-                  onChange={e => setExpiryMinutes(e.target.value)}
-                  className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
-                />
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount ($)</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                  />
+                </div>
               </div>
-            </div>
 
-            {error && (
-              <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
-                <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                <span>{error}</span>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Expires In (minutes)</label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="number"
+                    min="1"
+                    max="1440"
+                    value={expiryMinutes}
+                    onChange={e => setExpiryMinutes(e.target.value)}
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                  />
+                </div>
               </div>
+
+              {error && (
+                <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Generating...</> : <><QrCode className="w-4 h-4" />Generate QR Code</>}
+              </button>
+            </form>
+
+            {userEmail && (
+              <p className="text-xs text-gray-600 mt-4 font-mono">
+                Logged in as <span className="text-gray-400">{userEmail}</span>
+              </p>
             )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Generating...</> : <><QrCode className="w-4 h-4" />Generate QR Code</>}
-            </button>
-          </form>
-
-          {userEmail && (
-            <p className="text-xs text-gray-600 mt-4 font-mono">
-              Logged in as <span className="text-gray-400">{userEmail}</span>
-            </p>
-          )}
+          </div>
         </div>
 
         {/* QR Preview */}

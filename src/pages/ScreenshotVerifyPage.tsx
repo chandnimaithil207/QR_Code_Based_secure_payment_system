@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, AlertCircle, Wand2 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { OCRResult } from '../types';
 
@@ -10,6 +10,7 @@ export default function ScreenshotVerifyPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ocrProgress, setOcrProgress] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,8 +21,58 @@ export default function ScreenshotVerifyPage() {
       setImage(ev.target?.result as string);
       setOcrResult(null);
       setError(null);
+      setTransactionId('');
+      setSubmittedAmount('');
     };
     reader.readAsDataURL(file);
+  };
+
+  // Auto-extract text from image using Tesseract.js
+  const handleAutoExtract = async () => {
+    if (!image) return;
+
+    setAnalyzing(true);
+    setOcrProgress('Loading OCR engine...');
+    setError(null);
+
+    try {
+      // Dynamically load Tesseract.js
+      const Tesseract = await import('tesseract.js');
+
+      setOcrProgress('Reading text from image...');
+
+      const result = await Tesseract.recognize(image, 'eng', {
+        logger: (m: { status: string; progress: number }) => {
+          if (m.status === 'recognizing text') {
+            setOcrProgress(`Analyzing: ${Math.round(m.progress * 100)}%`);
+          }
+        },
+      });
+
+      const text = result.data.text;
+      setOcrProgress('Extracting transaction details...');
+
+      // Extract Transaction ID (format: TXN-XXXXX or similar patterns)
+      const txnMatch = text.match(/TXN[-\s]?\d{4,6}/i) || text.match(/Transaction\s*ID[:\s]*([A-Z0-9-]+)/i);
+      if (txnMatch) {
+        setTransactionId(txnMatch[0].replace(/\s/g, '').toUpperCase());
+      }
+
+      // Extract Amount (format: $XX.XX or similar)
+      const amountMatch = text.match(/\$?\s?(\d{1,3}(?:,\d{3})*\.\d{2})/) || text.match(/Amount[:\s]*\$?\s?(\d+\.?\d*)/i);
+      if (amountMatch) {
+        const cleanAmount = amountMatch[1].replace(/,/g, '');
+        setSubmittedAmount(`$${cleanAmount}`);
+      }
+
+      setOcrProgress(null);
+    } catch (err) {
+      console.error('OCR error:', err);
+      setError('Could not read text from image. Please enter details manually.');
+      setOcrProgress(null);
+    }
+
+    setAnalyzing(false);
   };
 
   const handleVerify = async () => {
@@ -85,6 +136,7 @@ export default function ScreenshotVerifyPage() {
     setOcrResult(null);
     setAnalyzing(false);
     setError(null);
+    setOcrProgress(null);
   };
 
   return (
@@ -137,6 +189,23 @@ export default function ScreenshotVerifyPage() {
 
           {image && (
             <div className="space-y-4 mt-5 pt-5 border-t border-surface-700">
+              {/* Auto-extract button */}
+              <button
+                onClick={handleAutoExtract}
+                disabled={analyzing}
+                className="w-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 font-semibold py-2.5 rounded-lg text-sm hover:bg-fuchsia-500/20 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {analyzing && ocrProgress ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />{ocrProgress}</>
+                ) : (
+                  <><Wand2 className="w-4 h-4" />Auto-Extract Details (OCR)</>
+                )}
+              </button>
+
+              <p className="text-xs text-center text-gray-600 font-mono">
+                Click above to auto-fill, or enter details manually below
+              </p>
+
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">
                   Transaction ID <span className="text-gray-600">(read from the screenshot)</span>
@@ -273,7 +342,7 @@ export default function ScreenshotVerifyPage() {
               <ScanLine className="w-12 h-12 opacity-30" />
               <p className="text-sm">Results will appear here</p>
               <p className="text-xs font-mono text-gray-700 text-center max-w-xs">
-                Upload the receipt, enter the Transaction ID and amount from it, then verify
+                Upload the receipt, click Auto-Extract or enter details, then verify
               </p>
             </div>
           )}
