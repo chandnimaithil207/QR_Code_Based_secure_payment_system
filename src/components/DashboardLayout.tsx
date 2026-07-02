@@ -13,7 +13,7 @@ export default function DashboardLayout() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="lg:ml-64 min-h-screen flex flex-col">
-        <header className="sticky top-0 z-30 bg-surface-900/80 backdrop-blur-xl border-b border-surface-700">
+        <header className="sticky top-0 z-30 bg-surface-900/80 backdrop-blur-xl border-b border-surface-600">
           <div className="flex items-center justify-between px-4 py-3 lg:px-6">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -29,7 +29,7 @@ export default function DashboardLayout() {
               <span className="text-xs font-mono text-gray-400">
                 {userEmail || 'merchant@secureqr.io'}
               </span>
-              <div className="w-8 h-8 rounded-full bg-surface-700 flex items-center justify-center text-xs font-bold text-cyber-green">
+              <div className="w-8 h-8 rounded-full bg-surface-600 flex items-center justify-center text-xs font-bold text-cyber-green">
                 {userEmail?.[0]?.toUpperCase() || 'M'}
               </div>
             </div>

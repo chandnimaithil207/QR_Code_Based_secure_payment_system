@@ -43,22 +43,22 @@ export default function LoginPage() {
     <div className="min-h-screen bg-surface-950 grid-bg flex items-center justify-center p-4">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-cyber-green/5 rounded-full blur-[100px]" />
-        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-cyber-blue/5 rounded-full blur-[100px]" />
+        <div className="absolute -top-40 -left-40 w-80 h-80 bg-cyber-green/20 rounded-full blur-[100px]" />
+        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-cyber-blue/20 rounded-full blur-[100px]" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-surface-800 border border-cyber-green/30 glow-green mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-surface-800 border border-cyber-green/50 glow-green mb-4">
             <ShieldCheck className="w-8 h-8 text-cyber-green" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">SecureQR</h1>
-          <p className="text-sm text-gray-500 mt-1 font-mono">Payment Verification System</p>
+          <p className="text-sm text-gray-400 mt-1 font-mono">Payment Verification System</p>
         </div>
 
         {/* Card */}
-        <div className="bg-surface-900 border border-surface-700 rounded-2xl p-6 lg:p-8">
+        <div className="bg-surface-900 border border-surface-600 rounded-2xl p-6 lg:p-8 card-glow">
           <div className="flex items-center gap-2 mb-6">
             <Zap className="w-4 h-4 text-cyber-blue" />
             <span className="text-xs font-mono text-cyber-blue uppercase tracking-widest">
@@ -76,7 +76,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="merchant@secureqr.io"
-                  className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                  className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all"
                 />
               </div>
             </div>
@@ -90,7 +90,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Enter password"
-                  className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-10 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                  className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-10 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all"
                 />
                 <button
                   type="button"
@@ -103,7 +103,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
+              <div className="bg-cyber-red/15 border border-cyber-red/50 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
                 {error}
               </div>
             )}
@@ -111,7 +111,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-cyber-green to-cyber-green-dark hover:from-cyber-green-light hover:to-cyber-green text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/40 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

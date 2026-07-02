@@ -1,9 +1,9 @@
 import type { TransactionStatus } from '../types';
 
 const config: Record<TransactionStatus, { bg: string; text: string; label: string }> = {
-  verified: { bg: 'bg-cyber-green/15', text: 'text-cyber-green', label: 'Verified' },
-  pending: { bg: 'bg-cyber-yellow/15', text: 'text-cyber-yellow', label: 'Pending' },
-  fraud: { bg: 'bg-cyber-red/15', text: 'text-cyber-red', label: 'Fraud' },
+  verified: { bg: 'bg-cyber-green/20', text: 'text-cyber-green', label: 'Verified' },
+  pending: { bg: 'bg-cyber-yellow/20', text: 'text-cyber-yellow', label: 'Pending' },
+  fraud: { bg: 'bg-cyber-red/20', text: 'text-cyber-red', label: 'Fraud' },
 };
 
 export default function StatusBadge({ status }: { status: TransactionStatus }) {

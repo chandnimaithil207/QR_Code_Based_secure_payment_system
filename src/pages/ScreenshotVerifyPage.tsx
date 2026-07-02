@@ -148,7 +148,7 @@ export default function ScreenshotVerifyPage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Upload + inputs */}
-        <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
+        <div className="bg-surface-900 border border-surface-600 rounded-xl p-5 lg:p-6 card-glow">
           <div className="flex items-center gap-2 mb-5">
             <Upload className="w-4 h-4 text-cyber-blue" />
             <span className="text-xs font-mono text-cyber-blue uppercase tracking-widest">Customer's Receipt Screenshot</span>
@@ -157,7 +157,7 @@ export default function ScreenshotVerifyPage() {
           {!image ? (
             <div
               onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-surface-600 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-blue/40 hover:bg-surface-800/50 transition-all duration-300"
+              className="border-2 border-dashed border-surface-600 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-blue hover:bg-surface-800/50 transition-all duration-300"
             >
               <FileImage className="w-12 h-12 text-gray-600 mx-auto mb-3" />
               <p className="text-sm text-gray-400 mb-1">Upload customer's payment receipt</p>
@@ -193,7 +193,7 @@ export default function ScreenshotVerifyPage() {
               <button
                 onClick={handleAutoExtract}
                 disabled={analyzing}
-                className="w-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 font-semibold py-2.5 rounded-lg text-sm hover:bg-fuchsia-500/20 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-fuchsia-500/15 border border-fuchsia-500/40 text-fuchsia-400 font-semibold py-2.5 rounded-lg text-sm hover:bg-fuchsia-500/25 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {analyzing && ocrProgress ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />{ocrProgress}</>
@@ -217,7 +217,7 @@ export default function ScreenshotVerifyPage() {
                     value={transactionId}
                     onChange={e => setTransactionId(e.target.value)}
                     placeholder="TXN-XXXXX"
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-blue/50 focus:ring-1 focus:ring-cyber-blue/30 transition-all font-mono"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/30 transition-all font-mono"
                   />
                 </div>
               </div>
@@ -233,13 +233,13 @@ export default function ScreenshotVerifyPage() {
                     value={submittedAmount}
                     onChange={e => setSubmittedAmount(e.target.value)}
                     placeholder="$0.00"
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-blue/50 focus:ring-1 focus:ring-cyber-blue/30 transition-all font-mono"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/30 transition-all font-mono"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
+                <div className="flex items-start gap-2 bg-cyber-red/15 border border-cyber-red/50 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -249,7 +249,7 @@ export default function ScreenshotVerifyPage() {
                 <button
                   onClick={handleVerify}
                   disabled={analyzing}
-                  className="w-full bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-semibold py-2.5 rounded-lg text-sm hover:bg-cyber-blue/20 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full bg-cyber-blue/15 border border-cyber-blue/40 text-cyber-blue font-semibold py-2.5 rounded-lg text-sm hover:bg-cyber-blue/25 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {analyzing
                     ? <><Loader2 className="w-4 h-4 animate-spin" />Verifying...</>
@@ -269,7 +269,7 @@ export default function ScreenshotVerifyPage() {
         </div>
 
         {/* Results */}
-        <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
+        <div className="bg-surface-900 border border-surface-600 rounded-xl p-5 lg:p-6 card-glow">
           <div className="flex items-center gap-2 mb-5">
             <ScanLine className="w-4 h-4 text-cyber-green" />
             <span className="text-xs font-mono text-cyber-green uppercase tracking-widest">Server Verification Result</span>
@@ -308,8 +308,8 @@ export default function ScreenshotVerifyPage() {
 
               <div className={`rounded-xl p-5 text-center border ${
                 ocrResult.verified
-                  ? 'border-cyber-green/30 bg-cyber-green/5 glow-green'
-                  : 'border-cyber-red/30 bg-cyber-red/5 glow-red'
+                  ? 'border-cyber-green/50 bg-cyber-green/15 glow-green'
+                  : 'border-cyber-red/50 bg-cyber-red/15 glow-red'
               }`}>
                 {ocrResult.verified ? (
                   <>

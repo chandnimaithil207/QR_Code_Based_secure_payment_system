@@ -225,14 +225,14 @@ export default function CustomerPaymentPage() {
     <div className="min-h-screen bg-surface-950 grid-bg flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-cyber-green/10 border border-cyber-green/30 mb-3">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-cyber-green/20 border border-cyber-green/50 mb-3">
             <ScanLine className="w-6 h-6 text-cyber-green" />
           </div>
           <h1 className="text-xl font-bold text-white">SecureQR Payment</h1>
-          <p className="text-xs text-gray-500 mt-1 font-mono">No login required — scan QR or paste token to pay</p>
+          <p className="text-xs text-gray-400 mt-1 font-mono">No login required — scan QR or paste token to pay</p>
         </div>
 
-        <div className="bg-surface-900 border border-surface-700 rounded-xl p-6 space-y-4">
+        <div className="bg-surface-900 border border-surface-600 rounded-xl p-6 space-y-4 card-glow">
           {phase === 'entry' && (
             <>
               <div>
@@ -245,7 +245,7 @@ export default function CustomerPaymentPage() {
                     onChange={e => setTokenInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && loadByToken()}
                     placeholder="TKN-XXXXXXXXXXXXXXXX"
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all font-mono"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all font-mono"
                   />
                 </div>
                 <p className="text-xs text-gray-600 mt-2 font-mono">
@@ -267,7 +267,7 @@ export default function CustomerPaymentPage() {
               </button>
 
               {error && (
-                <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
+                <div className="flex items-start gap-2 bg-cyber-red/15 border border-cyber-red/50 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -275,7 +275,7 @@ export default function CustomerPaymentPage() {
 
               <button
                 onClick={() => loadByToken()}
-                className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-3 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-cyber-green to-cyber-green-dark hover:from-cyber-green-light hover:to-cyber-green text-surface-950 font-semibold py-3 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/40 flex items-center justify-center gap-2"
               >
                 Continue <ArrowRight className="w-4 h-4" />
               </button>
@@ -326,7 +326,7 @@ export default function CustomerPaymentPage() {
                     value={customerName}
                     onChange={e => setCustomerName(e.target.value)}
                     placeholder="Enter your full name"
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all"
                   />
                 </div>
               </div>
@@ -340,7 +340,7 @@ export default function CustomerPaymentPage() {
 
               <button
                 onClick={handlePay}
-                className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-3 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-cyber-green to-cyber-green-dark hover:from-cyber-green-light hover:to-cyber-green text-surface-950 font-semibold py-3 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/40 flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-4 h-4" />
                 Pay Now — ${qrData.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -350,7 +350,7 @@ export default function CustomerPaymentPage() {
 
           {phase === 'success' && result && (
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-green/10 border border-cyber-green/30 mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-green/20 border border-cyber-green/50 mb-4">
                 <CheckCircle2 className="w-8 h-8 text-cyber-green" />
               </div>
               <h2 className="text-xl font-bold text-white mb-1">Payment Successful!</h2>
@@ -383,7 +383,7 @@ export default function CustomerPaymentPage() {
                 </div>
               </div>
 
-              <div className="bg-cyber-blue/5 border border-cyber-blue/20 rounded-lg p-3 mb-5 text-left">
+              <div className="bg-cyber-blue/10 border border-cyber-blue/40 rounded-lg p-3 mb-5 text-left">
                 <p className="text-xs text-cyber-blue font-mono font-semibold mb-1">Next step for you:</p>
                 <p className="text-xs text-gray-400 font-mono">
                   Screenshot this page and send it to your merchant. They will verify it using the Transaction ID shown above.
@@ -398,7 +398,7 @@ export default function CustomerPaymentPage() {
 
           {phase === 'rejected' && rejectReason && (
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-red/10 border border-cyber-red/30 mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-red/20 border border-cyber-red/50 mb-4">
                 <XCircle className="w-8 h-8 text-cyber-red" />
               </div>
               <h2 className="text-xl font-bold text-white mb-1">
@@ -413,7 +413,7 @@ export default function CustomerPaymentPage() {
                 {rejectReason === 'used' && 'This QR has already been paid. Each QR can only be used once.'}
                 {rejectReason === 'fraud' && 'This payment was flagged by the fraud monitoring system.'}
               </p>
-              <div className="bg-cyber-red/5 border border-cyber-red/20 rounded-lg p-3 mb-5 text-left">
+              <div className="bg-cyber-red/10 border border-cyber-red/40 rounded-lg p-3 mb-5 text-left">
                 <p className="text-xs text-gray-500 font-mono">This attempt has been logged for the merchant's fraud monitor.</p>
               </div>
               <button onClick={reset} className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200">

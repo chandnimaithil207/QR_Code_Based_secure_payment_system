@@ -155,7 +155,7 @@ export default function GenerateQRPage() {
         <div className="space-y-4">
           <ProductPresetsManager onSelect={handlePresetSelect} />
 
-          <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
+          <div className="bg-surface-900 border border-surface-600 rounded-xl p-5 lg:p-6 card-glow">
             <div className="flex items-center gap-2 mb-5">
               <QrCode className="w-4 h-4 text-cyber-green" />
               <span className="text-xs font-mono text-cyber-green uppercase tracking-widest">Configuration</span>
@@ -171,7 +171,7 @@ export default function GenerateQRPage() {
                     value={merchantName}
                     onChange={e => setMerchantName(e.target.value)}
                     placeholder="Your business or your name"
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all"
                   />
                 </div>
               </div>
@@ -187,7 +187,7 @@ export default function GenerateQRPage() {
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all"
                   />
                 </div>
               </div>
@@ -202,13 +202,13 @@ export default function GenerateQRPage() {
                     max="1440"
                     value={expiryMinutes}
                     onChange={e => setExpiryMinutes(e.target.value)}
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-green/50 focus:ring-1 focus:ring-cyber-green/30 transition-all"
+                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
+                <div className="flex items-start gap-2 bg-cyber-red/15 border border-cyber-red/50 text-cyber-red text-xs font-mono px-3 py-2 rounded-lg">
                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -217,7 +217,7 @@ export default function GenerateQRPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-cyber-green hover:bg-cyber-green-dark text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-cyber-green to-cyber-green-dark hover:from-cyber-green-light hover:to-cyber-green text-surface-950 font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/40 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Generating...</> : <><QrCode className="w-4 h-4" />Generate QR Code</>}
               </button>
@@ -232,7 +232,7 @@ export default function GenerateQRPage() {
         </div>
 
         {/* QR Preview */}
-        <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:p-6">
+        <div className="bg-surface-900 border border-surface-600 rounded-xl p-5 lg:p-6 card-glow">
           <div className="flex items-center gap-2 mb-5">
             <QrCode className="w-4 h-4 text-cyber-blue" />
             <span className="text-xs font-mono text-cyber-blue uppercase tracking-widest">Preview</span>
@@ -287,7 +287,7 @@ export default function GenerateQRPage() {
                 </div>
               </div>
 
-              <div className="mt-4 p-3 bg-cyber-green/5 border border-cyber-green/20 rounded-lg text-left">
+              <div className="mt-4 p-3 bg-cyber-green/10 border border-cyber-green/40 rounded-lg text-left">
                 <p className="text-xs text-gray-400 font-mono mb-1">Shareable payment link (QR scans here):</p>
                 <a
                   href={customerPaymentUrl}
@@ -302,7 +302,7 @@ export default function GenerateQRPage() {
 
               <button
                 onClick={handleCopyLink}
-                className="mt-3 w-full bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-medium py-2 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2 hover:bg-cyber-blue/20"
+                className="mt-3 w-full bg-cyber-blue/15 border border-cyber-blue/40 text-cyber-blue font-medium py-2 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2 hover:bg-cyber-blue/25"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Link Copied!' : 'Copy Payment Link'}

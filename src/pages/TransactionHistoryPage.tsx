@@ -17,10 +17,10 @@ interface UnifiedRow {
 
 function StatusPill({ status }: { status: RowStatus }) {
   const map: Record<RowStatus, { label: string; className: string }> = {
-    verified: { label: 'Verified', className: 'bg-cyber-green/15 text-cyber-green border border-cyber-green/30' },
-    pending:  { label: 'Pending',  className: 'bg-cyber-yellow/15 text-cyber-yellow border border-cyber-yellow/30' },
-    fraud:    { label: 'Fraud',    className: 'bg-cyber-red/15 text-cyber-red border border-cyber-red/30' },
-    expired:  { label: 'Expired',  className: 'bg-gray-700/50 text-gray-400 border border-gray-700' },
+    verified: { label: 'Verified', className: 'bg-cyber-green/20 text-cyber-green border border-cyber-green/50' },
+    pending:  { label: 'Pending',  className: 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50' },
+    fraud:    { label: 'Fraud',    className: 'bg-cyber-red/20 text-cyber-red border border-cyber-red/50' },
+    expired:  { label: 'Expired',  className: 'bg-gray-700/60 text-gray-400 border border-gray-600' },
   };
   const { label, className } = map[status];
   return (
@@ -129,14 +129,14 @@ export default function TransactionHistoryPage() {
       {/* Status summary pills */}
       <div className="flex flex-wrap gap-2">
         {(['verified', 'pending', 'expired', 'fraud'] as RowStatus[]).map(s => (
-          <div key={s} className="flex items-center gap-2 px-3 py-1.5 bg-surface-900 border border-surface-700 rounded-lg">
+          <div key={s} className="flex items-center gap-2 px-3 py-1.5 bg-surface-900 border border-surface-600 rounded-lg">
             <StatusPill status={s} />
             <span className="text-sm font-mono text-white">{counts[s] ?? 0}</span>
           </div>
         ))}
       </div>
 
-      <div className="bg-surface-900 border border-surface-700 rounded-xl p-4">
+      <div className="bg-surface-900 border border-surface-600 rounded-xl p-4 card-glow">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -145,7 +145,7 @@ export default function TransactionHistoryPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by Order ID, Transaction ID, or Customer..."
-              className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyber-blue/50 focus:ring-1 focus:ring-cyber-blue/30 transition-all"
+              className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/30 transition-all"
             />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -156,8 +156,8 @@ export default function TransactionHistoryPage() {
                 onClick={() => setFilter(f.value)}
                 className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                   filter === f.value
-                    ? 'bg-cyber-blue/15 text-cyber-blue border border-cyber-blue/30'
-                    : 'bg-surface-800 text-gray-400 border border-surface-700 hover:text-gray-200 hover:border-surface-600'
+                    ? 'bg-cyber-blue/20 text-cyber-blue border border-cyber-blue/50'
+                    : 'bg-surface-800 text-gray-400 border border-surface-700 hover:text-white hover:border-surface-600'
                 }`}
               >
                 {f.label}
@@ -167,8 +167,8 @@ export default function TransactionHistoryPage() {
         </div>
       </div>
 
-      <div className="bg-surface-900 border border-surface-700 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-surface-700">
+      <div className="bg-surface-900 border border-surface-600 rounded-xl overflow-hidden card-glow">
+        <div className="flex items-center justify-between p-4 border-b border-surface-600">
           <div className="flex items-center gap-2">
             <ArrowLeftRight className="w-4 h-4 text-cyber-blue" />
             <span className="text-sm font-semibold text-white">{filtered.length} rows</span>
@@ -181,7 +181,7 @@ export default function TransactionHistoryPage() {
             <Loader2 className="w-6 h-6 border-2 border-cyber-blue/30 border-t-cyber-blue rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <div className="p-4 m-4 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono rounded-lg flex items-start gap-2">
+          <div className="p-4 m-4 bg-cyber-red/15 border border-cyber-red/50 text-cyber-red text-xs font-mono rounded-lg flex items-start gap-2">
             <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
             <span>{error}</span>
           </div>

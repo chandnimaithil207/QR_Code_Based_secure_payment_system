@@ -9,17 +9,17 @@ interface StatCardProps {
 }
 
 const colorMap = {
-  green: 'border-cyber-green/20 bg-cyber-green/5',
-  blue: 'border-cyber-blue/20 bg-cyber-blue/5',
-  red: 'border-cyber-red/20 bg-cyber-red/5',
-  yellow: 'border-cyber-yellow/20 bg-cyber-yellow/5',
+  green: 'border-cyber-green/40 bg-cyber-green/15',
+  blue: 'border-cyber-blue/40 bg-cyber-blue/15',
+  red: 'border-cyber-red/40 bg-cyber-red/15',
+  yellow: 'border-cyber-yellow/40 bg-cyber-yellow/15',
 };
 
 const iconColorMap = {
-  green: 'text-cyber-green bg-cyber-green/10',
-  blue: 'text-cyber-blue bg-cyber-blue/10',
-  red: 'text-cyber-red bg-cyber-red/10',
-  yellow: 'text-cyber-yellow bg-cyber-yellow/10',
+  green: 'text-cyber-green bg-cyber-green/20',
+  blue: 'text-cyber-blue bg-cyber-blue/20',
+  red: 'text-cyber-red bg-cyber-red/20',
+  yellow: 'text-cyber-yellow bg-cyber-yellow/20',
 };
 
 export default function StatCard({ title, value, icon, color, trend }: StatCardProps) {
@@ -32,7 +32,7 @@ export default function StatCard({ title, value, icon, color, trend }: StatCardP
         </div>
       </div>
       <div className="text-2xl lg:text-3xl font-bold text-white font-mono">{value.toLocaleString()}</div>
-      {trend && <p className="text-xs text-gray-500 mt-1 font-mono">{trend}</p>}
+      {trend && <p className="text-xs text-gray-400 mt-1 font-mono">{trend}</p>}
     </div>
   );
 }

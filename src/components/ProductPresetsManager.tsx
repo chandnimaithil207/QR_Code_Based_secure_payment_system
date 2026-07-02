@@ -140,7 +140,7 @@ export default function ProductPresetsManager({ onSelect }: Props) {
   }
 
   return (
-    <div className="bg-surface-900 border border-surface-700 rounded-xl p-4">
+    <div className="bg-surface-900 border border-surface-600 rounded-xl p-4 card-glow">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Package className="w-4 h-4 text-cyber-blue" />
@@ -157,7 +157,7 @@ export default function ProductPresetsManager({ onSelect }: Props) {
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono px-2 py-1.5 rounded mb-3">
+        <div className="flex items-start gap-2 bg-cyber-red/15 border border-cyber-red/50 text-cyber-red text-xs font-mono px-2 py-1.5 rounded mb-3">
           <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -170,7 +170,7 @@ export default function ProductPresetsManager({ onSelect }: Props) {
             value={newName}
             onChange={e => setNewName(e.target.value)}
             placeholder="Product/service name"
-            className="w-full bg-surface-700 border border-surface-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-blue/50"
+            className="w-full bg-surface-700 border border-surface-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue/30"
           />
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -196,7 +196,7 @@ export default function ProductPresetsManager({ onSelect }: Props) {
             <button
               onClick={handleAdd}
               disabled={saving}
-              className="flex-1 bg-cyber-green/20 text-cyber-green py-1.5 rounded text-xs font-medium hover:bg-cyber-green/30 transition-colors flex items-center justify-center gap-1"
+              className="flex-1 bg-cyber-green/25 text-cyber-green py-1.5 rounded text-xs font-medium hover:bg-cyber-green/35 transition-colors flex items-center justify-center gap-1"
             >
               {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Save
             </button>

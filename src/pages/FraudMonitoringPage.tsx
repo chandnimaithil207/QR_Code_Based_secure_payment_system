@@ -13,17 +13,17 @@ interface FraudLogRow {
 }
 
 const fraudTypeColors: Record<string, string> = {
-  'Duplicate Payment': 'text-cyber-blue bg-cyber-blue/15',
-  'Invalid Token': 'text-cyber-red bg-cyber-red/15',
-  'Expired QR': 'text-cyber-yellow bg-cyber-yellow/15',
-  'Tampering': 'text-cyber-purple bg-cyber-purple/15',
+  'Duplicate Payment': 'text-cyber-blue bg-cyber-blue/20',
+  'Invalid Token': 'text-cyber-red bg-cyber-red/20',
+  'Expired QR': 'text-cyber-yellow bg-cyber-yellow/20',
+  'Tampering': 'text-cyber-purple bg-cyber-purple/20',
 };
 
 const chartColorMap: Record<string, string> = {
-  'Duplicate Payment': '#00d4ff',
-  'Invalid Token': '#ff3366',
-  'Expired QR': '#ffcc00',
-  'Tampering': '#cc66ff',
+  'Duplicate Payment': '#00e5ff',
+  'Invalid Token': '#ff4477',
+  'Expired QR': '#ffd700',
+  'Tampering': '#dd55ff',
 };
 
 export default function FraudMonitoringPage() {
@@ -79,7 +79,7 @@ export default function FraudMonitoringPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="bg-surface-900 border border-surface-700 rounded-xl p-5 lg:col-span-1">
+        <div className="bg-surface-900 border border-surface-600 rounded-xl p-5 lg:col-span-1 card-glow">
           <h2 className="text-sm font-semibold text-white mb-4">Fraud Distribution</h2>
           {pieData.length > 0 ? (
             <>
@@ -113,8 +113,8 @@ export default function FraudMonitoringPage() {
           )}
         </div>
 
-        <div className="bg-surface-900 border border-surface-700 rounded-xl overflow-hidden lg:col-span-2">
-          <div className="flex items-center justify-between p-4 border-b border-surface-700">
+        <div className="bg-surface-900 border border-surface-600 rounded-xl overflow-hidden lg:col-span-2 card-glow">
+          <div className="flex items-center justify-between p-4 border-b border-surface-600">
             <h2 className="text-sm font-semibold text-white">Fraud Logs</h2>
             <span className="text-xs font-mono text-cyber-red">{logs.length} incidents</span>
           </div>
@@ -124,7 +124,7 @@ export default function FraudMonitoringPage() {
               <Loader2 className="w-6 h-6 border-2 border-cyber-red/30 border-t-cyber-red rounded-full animate-spin" />
             </div>
           ) : error ? (
-            <div className="p-4 m-4 bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs font-mono rounded-lg flex items-start gap-2">
+            <div className="p-4 m-4 bg-cyber-red/15 border border-cyber-red/50 text-cyber-red text-xs font-mono rounded-lg flex items-start gap-2">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
             </div>

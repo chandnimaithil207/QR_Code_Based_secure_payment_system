@@ -56,8 +56,8 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm font-medium transition-all duration-200
                 ${
                   isActive
-                    ? 'bg-cyber-green/10 text-cyber-green border border-cyber-green/20'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-surface-800'
+                    ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/40'
+                    : 'text-gray-400 hover:text-white hover:bg-surface-800'
                 }`
               }
             >

@@ -3,25 +3,29 @@
 @theme {
   --color-cyber-green: #00ff88;
   --color-cyber-green-dark: #00cc6a;
-  --color-cyber-blue: #00d4ff;
-  --color-cyber-blue-dark: #0099cc;
-  --color-cyber-red: #ff3366;
-  --color-cyber-yellow: #ffcc00;
-  --color-cyber-purple: #cc66ff;
-  --color-cyber-fuchsia: #d946ef;
-  --color-surface-950: #0a0a0f;
-  --color-surface-900: #111118;
-  --color-surface-800: #1a1a24;
-  --color-surface-700: #242432;
-  --color-surface-600: #2e2e40;
-  --color-surface-500: #3a3a50;
+  --color-cyber-green-light: #33ffaa;
+  --color-cyber-blue: #00e5ff;
+  --color-cyber-blue-dark: #00b8d4;
+  --color-cyber-blue-light: #33ecff;
+  --color-cyber-red: #ff4477;
+  --color-cyber-red-light: #ff6699;
+  --color-cyber-yellow: #ffd700;
+  --color-cyber-yellow-light: #ffe033;
+  --color-cyber-purple: #dd55ff;
+  --color-cyber-fuchsia: #ee55ff;
+  --color-surface-950: #0f0f18;
+  --color-surface-900: #16161f;
+  --color-surface-800: #1e1e2a;
+  --color-surface-700: #2a2a3a;
+  --color-surface-600: #3a3a4e;
+  --color-surface-500: #4a4a60;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
   --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
 body {
   background-color: var(--color-surface-950);
-  color: #e0e0e8;
+  color: #ffffff;
   font-family: var(--font-sans);
 }
 
@@ -39,17 +43,22 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-surface-500);
+  background: var(--color-cyber-green);
 }
 
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.7; }
 }
 
 @keyframes scan-line {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .animate-pulse-glow {
@@ -60,21 +69,59 @@ body {
   animation: scan-line 3s linear infinite;
 }
 
+.animate-gradient {
+  animation: gradient-shift 3s ease infinite;
+  background-size: 200% 200%;
+}
+
 .glow-green {
-  box-shadow: 0 0 15px rgba(0, 255, 136, 0.3), 0 0 30px rgba(0, 255, 136, 0.1);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.5), 0 0 40px rgba(0, 255, 136, 0.2);
 }
 
 .glow-blue {
-  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3), 0 0 30px rgba(0, 212, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.5), 0 0 40px rgba(0, 229, 255, 0.2);
 }
 
 .glow-red {
-  box-shadow: 0 0 15px rgba(255, 51, 102, 0.3), 0 0 30px rgba(255, 51, 102, 0.1);
+  box-shadow: 0 0 20px rgba(255, 68, 119, 0.5), 0 0 40px rgba(255, 68, 119, 0.2);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.2);
 }
 
 .grid-bg {
   background-image:
-    linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(0, 255, 136, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
+}
+
+.card-glow {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 255, 136, 0.3);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-cyber-green) 0%, var(--color-cyber-green-dark) 100%);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--color-cyber-blue) 0%, var(--color-cyber-blue-dark) 100%);
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.input-glow:focus {
+  border-color: var(--color-cyber-green);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
 }
