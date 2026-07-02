@@ -130,7 +130,18 @@ export default function GenerateQRPage() {
     }
   };
 
-  const customerPaymentUrl = `${window.location.origin}/customer-payment`;
+  const handleCopyLink = () => {
+    if (qrData?.token) {
+      const paymentLink = `${window.location.origin}/customer-payment?token=${qrData.token}`;
+      navigator.clipboard.writeText(paymentLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // QR code now contains the full payment URL with token
+  const qrCodeValue = qrData ? `${window.location.origin}/customer-payment?token=${qrData.token}` : '';
+  const customerPaymentUrl = `${window.location.origin}/customer-payment?token=${qrData?.token ?? ''}`;
 
   return (
     <div className="space-y-6">
@@ -230,7 +241,7 @@ export default function GenerateQRPage() {
           {qrData ? (
             <div className="text-center">
               <div ref={qrRef} className="inline-block p-4 bg-white rounded-xl mb-4">
-                <QRCodeSVG value={qrData.token} size={180} level="H" bgColor="#ffffff" fgColor="#0a0a0f" />
+                <QRCodeSVG value={qrCodeValue} size={180} level="H" bgColor="#ffffff" fgColor="#0a0a0f" />
               </div>
 
               <div className="space-y-2.5 text-left mt-4">
@@ -250,7 +261,7 @@ export default function GenerateQRPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-cyber-green truncate max-w-[130px]">{qrData.token}</span>
                     <button onClick={handleCopyToken} className="text-gray-500 hover:text-white transition-colors shrink-0">
-                      {copied ? <Check className="w-3.5 h-3.5 text-cyber-green" /> : <Copy className="w-3.5 h-3.5" />}
+                      <Copy className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -277,7 +288,7 @@ export default function GenerateQRPage() {
               </div>
 
               <div className="mt-4 p-3 bg-cyber-green/5 border border-cyber-green/20 rounded-lg text-left">
-                <p className="text-xs text-gray-400 font-mono mb-1">Customer payment link:</p>
+                <p className="text-xs text-gray-400 font-mono mb-1">Shareable payment link (QR scans here):</p>
                 <a
                   href={customerPaymentUrl}
                   target="_blank"
@@ -290,8 +301,16 @@ export default function GenerateQRPage() {
               </div>
 
               <button
+                onClick={handleCopyLink}
+                className="mt-3 w-full bg-cyber-blue/10 border border-cyber-blue/30 text-cyber-blue font-medium py-2 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2 hover:bg-cyber-blue/20"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Link Copied!' : 'Copy Payment Link'}
+              </button>
+
+              <button
                 onClick={handleDownload}
-                className="mt-4 w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2"
+                className="mt-2 w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 Download QR Image

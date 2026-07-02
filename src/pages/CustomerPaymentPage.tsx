@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { QRData } from '../types';
@@ -53,6 +54,7 @@ function generateTransactionId(): string {
 }
 
 export default function CustomerPaymentPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tokenInput, setTokenInput] = useState('');
   const [phase, setPhase] = useState<Phase>('entry');
   const [rejectReason, setRejectReason] = useState<RejectReason | null>(null);
@@ -63,6 +65,15 @@ export default function CustomerPaymentPage() {
   const [error, setError] = useState<string | null>(null);
   const [decoding, setDecoding] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Auto-load token from URL parameter
+  useEffect(() => {
+    const tokenFromUrl = searchParams.get('token');
+    if (tokenFromUrl && tokenFromUrl.startsWith('TKN-') && phase === 'entry' && !tokenInput) {
+      setTokenInput(tokenFromUrl);
+      loadByToken(tokenFromUrl);
+    }
+  }, [searchParams]);
 
   const handleScanQrImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -207,6 +218,7 @@ export default function CustomerPaymentPage() {
     setRejectReason(null);
     setError(null);
     setPhase('entry');
+    setSearchParams({});
   };
 
   return (
