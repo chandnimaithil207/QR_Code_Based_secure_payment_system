@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, Wand2 } from 'lucide-react';
+import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, Wand2, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { OCRResult } from '../types';
 
@@ -12,6 +12,7 @@ export default function ScreenshotVerifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [ocrProgress, setOcrProgress] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -27,61 +28,117 @@ export default function ScreenshotVerifyPage() {
     reader.readAsDataURL(file);
   };
 
+  const preprocessImage = (imageDataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+
+        // Scale up image for better OCR (2x)
+        canvas.width = img.width * 2;
+        canvas.height = img.height * 2;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Increase contrast and convert to grayscale
+        ctx.filter = 'contrast(1.5) grayscale(100%)';
+        ctx.drawImage(canvas, 0, 0);
+
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src = imageDataUrl;
+    });
+  };
+
   const handleAutoExtract = async () => {
     if (!image) return;
 
     setAnalyzing(true);
-    setOcrProgress('Initializing OCR...');
+    setOcrProgress('Preparing image...');
     setError(null);
 
     try {
       const Tesseract = await import('tesseract.js');
 
-      setOcrProgress('Loading language data...');
+      setOcrProgress('Loading OCR engine...');
 
+      // Preprocess image for better accuracy
+      const processedImage = await preprocessImage(image);
+
+      // Create worker with correct v7 API
       const worker = await Tesseract.createWorker('eng', 1, {
         logger: (m: { status: string; progress?: number }) => {
           if (m.status === 'recognizing text' && m.progress) {
             setOcrProgress(`Analyzing: ${Math.round(m.progress * 100)}%`);
           } else if (m.status === 'loading language traineddata') {
             setOcrProgress('Loading language model...');
-          } else if (m.status === 'initializing api') {
-            setOcrProgress('Preparing OCR engine...');
+          } else if (m.status === 'initializing tesseract') {
+            setOcrProgress('Initializing OCR...');
           }
         },
       });
 
+
       setOcrProgress('Reading text from image...');
 
-      const { data: { text } } = await worker.recognize(image);
+      const { data: { text } } = await worker.recognize(processedImage);
       await worker.terminate();
 
       console.log('OCR extracted text:', text);
 
       setOcrProgress('Extracting transaction details...');
 
-      const txnMatch = text.match(/TXN[-\s]?\d{4,6}/i)
-        || text.match(/Transaction\s*(?:ID)?[:\s]*([A-Z0-9-]+)/i)
-        || text.match(/TXN([A-Z0-9-]+)/i);
+      // More flexible patterns for Transaction ID
+      const txnPatterns = [
+        /TXN[-\s]?\d{4,10}/i,
+        /Transaction\s*(?:ID|No\.?|#)[:\s]*([A-Z0-9][\w-]{4,20})/i,
+        /TXN([A-Z0-9-]{4,10})/i,
+        /#[A-Z0-9]{5,10}/i,
+        /ID[:\s]*([A-Z0-9-]{5,15})/i,
+      ];
 
-      if (txnMatch) {
-        const cleanedTxn = txnMatch[0].replace(/\s/g, '').toUpperCase();
-        setTransactionId(cleanedTxn);
+      let foundTxn = '';
+      for (const pattern of txnPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          foundTxn = match[0].replace(/^(Transaction\s*(?:ID|No\.?|#)[:\s]*|ID[:\s]*)/i, '').replace(/\s/g, '').toUpperCase();
+          break;
+        }
       }
 
-      const amountMatch = text.match(/\$\s?(\d{1,3}(?:,\d{3})*\.\d{2})/)
-        || text.match(/Amount[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*\.\d{2})/i)
-        || text.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/);
+      if (foundTxn) {
+        setTransactionId(foundTxn);
+      }
 
-      if (amountMatch) {
-        const cleanAmount = amountMatch[1].replace(/,/g, '');
-        setSubmittedAmount(`$${cleanAmount}`);
+      // More flexible patterns for Amount
+      const amountPatterns = [
+        /\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+        /Amount[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+        /Total[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+        /Paid[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+        /(\d{1,3}(?:,\d{3})?\.\d{2})\s*(?:USD|INR)?/i,
+      ];
+
+      let foundAmount = '';
+      for (const pattern of amountPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          foundAmount = match[1].replace(/,/g, '');
+          if (parseFloat(foundAmount) > 0) {
+            setSubmittedAmount(`$${foundAmount}`);
+            break;
+          }
+        }
       }
 
       setOcrProgress(null);
 
-      if (!txnMatch && !amountMatch) {
-        setError('Could not find Transaction ID or amount in the image. Please enter manually.');
+      if (!foundTxn && !foundAmount) {
+        setError('Could not find Transaction ID or amount. Please enter manually.');
+      } else if (!foundTxn) {
+        setError('Could not find Transaction ID. Please enter manually.');
+      } else if (!foundAmount) {
+        setError('Could not find amount. Please enter manually.');
       }
     } catch (err) {
       console.error('OCR error:', err);
@@ -159,7 +216,7 @@ export default function ScreenshotVerifyPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl lg:text-2xl font-bold text-white">Screenshot Verify</h1>
-        <p className="text-sm text-gray-400 mt-1 font-mono">Upload customer's payment receipt to verify</p>
+        <p className="text-sm text-gray-400 mt-1 font-mono">Upload or scan customer's payment receipt</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -170,13 +227,23 @@ export default function ScreenshotVerifyPage() {
           </div>
 
           {!image ? (
-            <div
-              onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-surface-600 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-blue hover:bg-surface-800/50 transition-all duration-300"
-            >
-              <FileImage className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">Click to upload payment receipt</p>
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+            <div className="space-y-3">
+              <div
+                onClick={() => fileRef.current?.click()}
+                className="border-2 border-dashed border-surface-600 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-blue hover:bg-surface-800/50 transition-all duration-300"
+              >
+                <FileImage className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+                <p className="text-sm text-gray-400">Click to upload receipt image</p>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+              </div>
+              <button
+                onClick={() => cameraRef.current?.click()}
+                className="w-full bg-surface-800 border border-surface-600 rounded-lg py-3 text-sm text-gray-300 hover:text-white hover:border-cyber-blue transition-all flex items-center justify-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                Scan with Camera
+              </button>
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleUpload} className="hidden" />
             </div>
           ) : (
             <div className="space-y-3">
@@ -191,13 +258,23 @@ export default function ScreenshotVerifyPage() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => { setOcrResult(null); setError(null); fileRef.current?.click(); }}
-                className="px-4 py-2 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-xs hover:text-white hover:border-surface-500 transition-all"
-              >
-                Change Image
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setOcrResult(null); setError(null); fileRef.current?.click(); }}
+                  className="flex-1 px-4 py-2 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-xs hover:text-white hover:border-surface-500 transition-all"
+                >
+                  Change Image
+                </button>
+                <button
+                  onClick={() => { setOcrResult(null); setError(null); cameraRef.current?.click(); }}
+                  className="flex-1 px-4 py-2 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-xs hover:text-white hover:border-cyber-blue transition-all flex items-center justify-center gap-1"
+                >
+                  <Camera className="w-3 h-3" />
+                  Camera
+                </button>
+              </div>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleUpload} className="hidden" />
             </div>
           )}
 
