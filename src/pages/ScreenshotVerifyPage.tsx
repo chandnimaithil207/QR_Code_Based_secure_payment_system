@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, Wand2, Camera } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import { runOCR, extractTransactionDetails, verifyAgainstDatabase } from '../lib/ocrPipeline';
 import type { OCRResult } from '../types';
 
 export default function ScreenshotVerifyPage() {
@@ -28,28 +28,6 @@ export default function ScreenshotVerifyPage() {
     reader.readAsDataURL(file);
   };
 
-  const preprocessImage = (imageDataUrl: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!;
-
-        // Scale up image for better OCR (2x)
-        canvas.width = img.width * 2;
-        canvas.height = img.height * 2;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        // Increase contrast and convert to grayscale
-        ctx.filter = 'contrast(1.5) grayscale(100%)';
-        ctx.drawImage(canvas, 0, 0);
-
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.src = imageDataUrl;
-    });
-  };
-
   const handleAutoExtract = async () => {
     if (!image) return;
 
@@ -58,77 +36,21 @@ export default function ScreenshotVerifyPage() {
     setError(null);
 
     try {
-      const Tesseract = await import('tesseract.js');
-
-      setOcrProgress('Loading OCR engine...');
-
-      // Preprocess image for better accuracy
-      const processedImage = await preprocessImage(image);
-
-      // Create worker with correct v7 API
-      const worker = await Tesseract.createWorker('eng', 1, {
-        logger: (m: { status: string; progress?: number }) => {
-          if (m.status === 'recognizing text' && m.progress) {
-            setOcrProgress(`Analyzing: ${Math.round(m.progress * 100)}%`);
-          } else if (m.status === 'loading language traineddata') {
-            setOcrProgress('Loading language model...');
-          } else if (m.status === 'initializing tesseract') {
-            setOcrProgress('Initializing OCR...');
-          }
-        },
+      const text = await runOCR(image, (msg) => {
+        if (msg) setOcrProgress(msg);
       });
-
-
-      setOcrProgress('Reading text from image...');
-
-      const { data: { text } } = await worker.recognize(processedImage);
-      await worker.terminate();
 
       console.log('OCR extracted text:', text);
 
       setOcrProgress('Extracting transaction details...');
 
-      // More flexible patterns for Transaction ID
-      const txnPatterns = [
-        /TXN[-\s]?\d{4,10}/i,
-        /Transaction\s*(?:ID|No\.?|#)[:\s]*([A-Z0-9][\w-]{4,20})/i,
-        /TXN([A-Z0-9-]{4,10})/i,
-        /#[A-Z0-9]{5,10}/i,
-        /ID[:\s]*([A-Z0-9-]{5,15})/i,
-      ];
-
-      let foundTxn = '';
-      for (const pattern of txnPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          foundTxn = match[0].replace(/^(Transaction\s*(?:ID|No\.?|#)[:\s]*|ID[:\s]*)/i, '').replace(/\s/g, '').toUpperCase();
-          break;
-        }
-      }
+      const { transactionId: foundTxn, amount: foundAmount } = extractTransactionDetails(text);
 
       if (foundTxn) {
         setTransactionId(foundTxn);
       }
-
-      // More flexible patterns for Amount
-      const amountPatterns = [
-        /\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
-        /Amount[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
-        /Total[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
-        /Paid[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
-        /(\d{1,3}(?:,\d{3})?\.\d{2})\s*(?:USD|INR)?/i,
-      ];
-
-      let foundAmount = '';
-      for (const pattern of amountPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          foundAmount = match[1].replace(/,/g, '');
-          if (parseFloat(foundAmount) > 0) {
-            setSubmittedAmount(`$${foundAmount}`);
-            break;
-          }
-        }
+      if (foundAmount) {
+        setSubmittedAmount(foundAmount);
       }
 
       setOcrProgress(null);
@@ -158,48 +80,22 @@ export default function ScreenshotVerifyPage() {
 
     setAnalyzing(true);
 
-    const cleanAmount = submittedAmount.replace(/[$,\s]/g, '');
-    const parsedAmount = parseFloat(cleanAmount);
+    try {
+      const result = await verifyAgainstDatabase(transactionId.trim(), submittedAmount.trim());
 
-    const { data: tx, error: lookupError } = await supabase
-      .from('transactions')
-      .select('transaction_id, amount, customer_name, status, created_at')
-      .eq('transaction_id', transactionId.trim())
-      .maybeSingle();
+      setAnalyzing(false);
 
-    const matched = !!tx && !isNaN(parsedAmount) && Math.abs(Number(tx.amount) - parsedAmount) < 0.01 && tx.status === 'verified';
-
-    await supabase.from('screenshot_verifications').insert({
-      transaction_id: transactionId.trim(),
-      submitted_amount: submittedAmount.trim(),
-      matched,
-      customer_name: tx?.customer_name ?? null,
-    });
-
-    setAnalyzing(false);
-
-    if (lookupError) { setError('Could not reach the verification service.'); return; }
-
-    if (!tx) {
       setOcrResult({
-        transactionId: transactionId.trim(),
-        amount: submittedAmount.trim(),
-        date: new Date().toLocaleDateString('en-US'),
-        customerName: null,
-        verified: false,
+        transactionId: result.transactionId,
+        amount: result.amount,
+        date: result.date,
+        customerName: result.customerName,
+        verified: result.verified,
       });
-      return;
+    } catch (err) {
+      setAnalyzing(false);
+      setError(err instanceof Error ? err.message : 'Verification failed.');
     }
-
-    const amountMatches = !isNaN(parsedAmount) && Math.abs(Number(tx.amount) - parsedAmount) < 0.01;
-
-    setOcrResult({
-      transactionId: tx.transaction_id,
-      amount: Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }),
-      date: new Date(tx.created_at).toLocaleString('en-US'),
-      customerName: tx.customer_name,
-      verified: amountMatches && tx.status === 'verified',
-    });
   };
 
   const handleReset = () => {

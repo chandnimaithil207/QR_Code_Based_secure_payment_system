@@ -1,11 +1,56 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Image as ImageIcon, CloudOff, CloudUpload } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { QRData } from '../types';
 
-type Phase = 'entry' | 'loading' | 'paying' | 'success' | 'rejected';
+type Phase = 'entry' | 'loading' | 'paying' | 'success' | 'rejected' | 'pending_sync';
 type RejectReason = 'invalid' | 'expired' | 'used' | 'fraud';
+
+interface PendingSyncRecord {
+  transactionId: string;
+  orderId: string;
+  amount: number;
+  customerName: string;
+  qrCodeId: string;
+  qrToken: string;
+  merchantUserId: string | null;
+  timestamp: string;
+  attemptCount: number;
+}
+
+const PENDING_SYNC_KEY = 'secureqr_pending_sync';
+
+function getPendingSync(): PendingSyncRecord[] {
+  try {
+    const raw = localStorage.getItem(PENDING_SYNC_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setPendingSync(records: PendingSyncRecord[]): void {
+  localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(records));
+}
+
+function addPendingSync(record: PendingSyncRecord): void {
+  const records = getPendingSync();
+  records.push(record);
+  setPendingSync(records);
+}
+
+function removePendingSync(transactionId: string): void {
+  const records = getPendingSync().filter(r => r.transactionId !== transactionId);
+  setPendingSync(records);
+}
+
+function updatePendingSync(transactionId: string, updates: Partial<PendingSyncRecord>): void {
+  const records = getPendingSync().map(r =>
+    r.transactionId === transactionId ? { ...r, ...updates } : r
+  );
+  setPendingSync(records);
+}
 
 interface PaymentResult {
   transactionId: string;
@@ -66,6 +111,86 @@ export default function CustomerPaymentPage() {
   const [decoding, setDecoding] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [pendingSyncTxId, setPendingSyncTxId] = useState<string | null>(null);
+  const [syncRetriesLeft, setSyncRetriesLeft] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const attemptSync = useCallback(async (record: PendingSyncRecord): Promise<boolean> => {
+    const { error: txError } = await supabase.from('transactions').insert({
+      transaction_id: record.transactionId,
+      qr_code_id: record.qrCodeId,
+      order_id: record.orderId,
+      amount: record.amount,
+      status: 'verified',
+      customer_name: record.customerName,
+      user_id: record.merchantUserId,
+    });
+
+    if (txError) return false;
+
+    await supabase.from('qr_codes').update({ used: true }).eq('token', record.qrToken);
+    removePendingSync(record.transactionId);
+    return true;
+  }, []);
+
+  const startSyncRetry = useCallback((record: PendingSyncRecord) => {
+    let delay = 15000;
+    const factor = 1.5;
+    const maxAttempts = 10;
+
+    const retry = async () => {
+      const current = getPendingSync().find(r => r.transactionId === record.transactionId);
+      if (!current) return;
+
+      const nextAttempt = current.attemptCount + 1;
+      updatePendingSync(current.transactionId, { attemptCount: nextAttempt });
+      setSyncRetriesLeft(Math.max(0, maxAttempts - nextAttempt));
+
+      const success = await attemptSync(current);
+      if (success) {
+        if (retryTimerRef.current) { clearInterval(retryTimerRef.current); retryTimerRef.current = null; }
+        removePendingSync(current.transactionId);
+        setPendingSyncCount(0);
+        setPendingSyncTxId(null);
+        setResult({
+          transactionId: current.transactionId,
+          merchantName: '',
+          amount: current.amount,
+          orderId: current.orderId,
+          customerName: current.customerName,
+          date: new Date(current.timestamp).toLocaleString('en-US'),
+        });
+        setPhase('success');
+        return;
+      }
+
+      if (nextAttempt >= maxAttempts) {
+        if (retryTimerRef.current) { clearInterval(retryTimerRef.current); retryTimerRef.current = null; }
+      } else {
+        delay = Math.min(delay * factor, 120000);
+      }
+    };
+
+    retryTimerRef.current = setInterval(retry, delay);
+  }, [attemptSync]);
+
+  // On mount: check for unsynced pending records
+  useEffect(() => {
+    const pending = getPendingSync();
+    if (pending.length > 0) {
+      setPendingSyncCount(pending.length);
+      setPendingSyncTxId(pending[0].transactionId);
+      setSyncRetriesLeft(10 - pending[0].attemptCount);
+      setPhase('pending_sync');
+      startSyncRetry(pending[0]);
+    }
+
+    return () => {
+      if (retryTimerRef.current) { clearInterval(retryTimerRef.current); retryTimerRef.current = null; }
+    };
+  }, [startSyncRetry]);
+
   // Auto-load token from URL parameter
   useEffect(() => {
     const tokenFromUrl = searchParams.get('token');
@@ -74,6 +199,13 @@ export default function CustomerPaymentPage() {
       loadByToken(tokenFromUrl);
     }
   }, [searchParams]);
+
+  // Update pending sync count when entering page
+  useEffect(() => {
+    if (phase === 'entry') {
+      setPendingSyncCount(getPendingSync().length);
+    }
+  }, [phase]);
 
   const handleScanQrImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -182,6 +314,21 @@ export default function CustomerPaymentPage() {
     }
 
     const txId = generateTransactionId();
+    const timestamp = new Date().toISOString();
+
+    // Save to localStorage BEFORE attempting server insert
+    const pendingRecord: PendingSyncRecord = {
+      transactionId: txId,
+      orderId: qrData.orderId,
+      amount: qrData.amount,
+      customerName: customerName.trim(),
+      qrCodeId: qrData.id,
+      qrToken: qrData.token,
+      merchantUserId,
+      timestamp,
+      attemptCount: 0,
+    };
+
     const { error: txError } = await supabase.from('transactions').insert({
       transaction_id: txId,
       qr_code_id: qrData.id,
@@ -193,7 +340,13 @@ export default function CustomerPaymentPage() {
     });
 
     if (txError) {
-      setError('Payment could not be processed. Please try again.');
+      // Server insert failed — save locally and enter pending sync mode
+      addPendingSync(pendingRecord);
+      setPendingSyncCount(1);
+      setPendingSyncTxId(txId);
+      setSyncRetriesLeft(10);
+      setPhase('pending_sync');
+      startSyncRetry(pendingRecord);
       return;
     }
 
@@ -233,6 +386,13 @@ export default function CustomerPaymentPage() {
         </div>
 
         <div className="bg-surface-900 border border-surface-600 rounded-xl p-6 space-y-4 card-glow">
+          {pendingSyncCount > 0 && phase !== 'pending_sync' && phase !== 'success' && (
+            <div className="flex items-center gap-2 bg-cyber-yellow/10 border border-cyber-yellow/40 text-cyber-yellow text-xs font-mono px-3 py-2 rounded-lg">
+              <CloudOff className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>Pending Sync: {pendingSyncCount} record{pendingSyncCount > 1 ? 's' : ''} waiting to confirm</span>
+            </div>
+          )}
+
           {phase === 'entry' && (
             <>
               <div>
@@ -393,6 +553,44 @@ export default function CustomerPaymentPage() {
               <button onClick={reset} className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200">
                 Done
               </button>
+            </div>
+          )}
+
+          {phase === 'pending_sync' && (
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-yellow/20 border border-cyber-yellow/50 mb-4">
+                <CloudUpload className="w-8 h-8 text-cyber-yellow animate-pulse" />
+              </div>
+              <h2 className="text-lg font-bold text-white mb-1">Payment Recorded Locally</h2>
+              <p className="text-xs text-gray-500 font-mono mb-4">
+                Confirming with server... keep this page open.
+              </p>
+
+              {pendingSyncTxId && (
+                <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg mb-4">
+                  <span className="text-xs text-gray-400">Reference Number</span>
+                  <span className="text-sm font-mono text-cyber-blue">{pendingSyncTxId}</span>
+                </div>
+              )}
+
+              {syncRetriesLeft > 0 ? (
+                <div className="flex items-center justify-center gap-2 text-xs text-cyber-yellow font-mono">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Retrying... {syncRetriesLeft} attempts left
+                </div>
+              ) : (
+                <div className="bg-cyber-yellow/10 border border-cyber-yellow/40 rounded-lg p-3 text-left">
+                  <p className="text-xs text-gray-400 font-mono">
+                    Could not reach the server after multiple attempts. Keep your reference number — your merchant will reconcile this payment.
+                  </p>
+                </div>
+              )}
+
+              {pendingSyncTxId && (
+                <p className="text-xs text-gray-600 mt-4 font-mono">
+                  Your reference: <span className="text-cyber-blue">{pendingSyncTxId}</span>
+                </p>
+              )}
             </div>
           )}
 

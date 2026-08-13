@@ -28,7 +28,7 @@ function generateToken(): string {
 export default function GenerateQRPage() {
   const [merchantName, setMerchantName] = useState('');
   const [amount, setAmount] = useState('');
-  const [expiryMinutes, setExpiryMinutes] = useState('15');
+
   const [qrData, setQrData] = useState<GeneratedQR | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,9 +47,7 @@ export default function GenerateQRPage() {
     if (data.user?.user_metadata?.merchant_name) {
       setMerchantName(data.user.user_metadata.merchant_name);
     }
-    if (data.user?.user_metadata?.default_expiry) {
-      setExpiryMinutes(data.user.user_metadata.default_expiry);
-    }
+
   };
 
   const handlePresetSelect = (_name: string, presetAmount: number) => {
@@ -61,10 +59,9 @@ export default function GenerateQRPage() {
     setError(null);
 
     const parsedAmount = parseFloat(amount);
-    const parsedMinutes = parseInt(expiryMinutes, 10);
+    const parsedMinutes = 30;
     if (!merchantName.trim()) { setError('Merchant name is required.'); return; }
     if (!parsedAmount || parsedAmount <= 0) { setError('A positive amount is required.'); return; }
-    if (!parsedMinutes || parsedMinutes < 1) { setError('Expiry must be at least 1 minute.'); return; }
 
     const orderId = generateOrderId();
     const token = generateToken();
@@ -72,7 +69,7 @@ export default function GenerateQRPage() {
 
     if (user && merchantName.trim()) {
       await supabase.auth.updateUser({
-        data: { merchant_name: merchantName.trim(), default_expiry: expiryMinutes }
+        data: { merchant_name: merchantName.trim() }
       });
     }
 
@@ -192,19 +189,9 @@ export default function GenerateQRPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Expires In (minutes)</label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    type="number"
-                    min="1"
-                    max="1440"
-                    value={expiryMinutes}
-                    onChange={e => setExpiryMinutes(e.target.value)}
-                    className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-green focus:ring-2 focus:ring-cyber-green/30 transition-all"
-                  />
-                </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500 font-mono">
+                <Clock className="w-3.5 h-3.5 text-cyber-yellow" />
+                QR expires 30 minutes after generation
               </div>
 
               {error && (
