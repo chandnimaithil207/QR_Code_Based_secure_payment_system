@@ -513,10 +513,7 @@ export default function CustomerPaymentPage() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-green/20 border border-cyber-green/50 mb-4">
                 <CheckCircle2 className="w-8 h-8 text-cyber-green" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-1">Payment Successful!</h2>
-              <p className="text-xs text-gray-500 font-mono mb-5">
-                Take a screenshot of this screen and share it with the merchant as your payment receipt.
-              </p>
+              <h2 className="text-xl font-bold text-white mb-5">Payment Successful!</h2>
 
               <div className="space-y-3 text-left mb-5">
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
@@ -543,13 +540,6 @@ export default function CustomerPaymentPage() {
                 </div>
               </div>
 
-              <div className="bg-cyber-blue/10 border border-cyber-blue/40 rounded-lg p-3 mb-5 text-left">
-                <p className="text-xs text-cyber-blue font-mono font-semibold mb-1">Next step for you:</p>
-                <p className="text-xs text-gray-400 font-mono">
-                  Screenshot this page and send it to your merchant. They will verify it using the Transaction ID shown above.
-                </p>
-              </div>
-
               <button onClick={reset} className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200">
                 Done
               </button>
@@ -561,10 +551,7 @@ export default function CustomerPaymentPage() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyber-yellow/20 border border-cyber-yellow/50 mb-4">
                 <CloudUpload className="w-8 h-8 text-cyber-yellow animate-pulse" />
               </div>
-              <h2 className="text-lg font-bold text-white mb-1">Payment Recorded Locally</h2>
-              <p className="text-xs text-gray-500 font-mono mb-4">
-                Confirming with server... keep this page open.
-              </p>
+              <h2 className="text-lg font-bold text-white mb-4">Payment Recorded Locally</h2>
 
               {pendingSyncTxId && (
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg mb-4">
@@ -581,16 +568,12 @@ export default function CustomerPaymentPage() {
               ) : (
                 <div className="bg-cyber-yellow/10 border border-cyber-yellow/40 rounded-lg p-3 text-left">
                   <p className="text-xs text-gray-400 font-mono">
-                    Could not reach the server after multiple attempts. Keep your reference number — your merchant will reconcile this payment.
+                    Could not reach the server after multiple attempts. Keep your reference number.
                   </p>
                 </div>
               )}
 
-              {pendingSyncTxId && (
-                <p className="text-xs text-gray-600 mt-4 font-mono">
-                  Your reference: <span className="text-cyber-blue">{pendingSyncTxId}</span>
-                </p>
-              )}
+
             </div>
           )}
 
@@ -605,15 +588,7 @@ export default function CustomerPaymentPage() {
                 {rejectReason === 'used' && 'QR Code Already Used'}
                 {rejectReason === 'fraud' && 'Payment Rejected'}
               </h2>
-              <p className="text-xs text-gray-500 font-mono mb-5">
-                {rejectReason === 'invalid' && 'This token does not exist. Check you copied it correctly.'}
-                {rejectReason === 'expired' && 'This QR has expired. Ask your merchant to generate a new one.'}
-                {rejectReason === 'used' && 'This QR has already been paid. Each QR can only be used once.'}
-                {rejectReason === 'fraud' && 'This payment was flagged by the fraud monitoring system.'}
-              </p>
-              <div className="bg-cyber-red/10 border border-cyber-red/40 rounded-lg p-3 mb-5 text-left">
-                <p className="text-xs text-gray-500 font-mono">This attempt has been logged for the merchant's fraud monitor.</p>
-              </div>
+
               <button onClick={reset} className="w-full bg-surface-700 hover:bg-surface-600 text-white font-medium py-2.5 rounded-lg text-sm transition-all duration-200">
                 Try Another Token
               </button>
@@ -621,9 +596,6 @@ export default function CustomerPaymentPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-700 mt-4 font-mono">
-          Powered by SecureQR — token-based payment verification
-        </p>
       </div>
     </div>
   );

@@ -18,15 +18,15 @@ export function preprocessImage(imageDataUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
+      const maxSize = 1000;
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
 
-      canvas.width = img.width * 2;
-      canvas.height = img.height * 2;
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      ctx.filter = 'contrast(1.4) grayscale(100%)';
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      ctx.filter = 'contrast(1.5) grayscale(100%)';
-      ctx.drawImage(canvas, 0, 0);
 
       resolve(canvas.toDataURL('image/png'));
     };

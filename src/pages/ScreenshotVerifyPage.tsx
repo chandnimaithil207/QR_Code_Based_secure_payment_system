@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, IndianRupee, User, Loader2, Wand2, Camera } from 'lucide-react';
+import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, IndianRupee, User, Loader2, Wand2 } from 'lucide-react';
 import { runOCR, extractTransactionDetails, verifyAgainstDatabase } from '../lib/ocrPipeline';
 import type { OCRResult } from '../types';
 
@@ -12,7 +12,6 @@ export default function ScreenshotVerifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [ocrProgress, setOcrProgress] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -112,7 +111,7 @@ export default function ScreenshotVerifyPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl lg:text-2xl font-bold text-white">Screenshot Verify</h1>
-        <p className="text-sm text-gray-400 mt-1 font-mono">Upload or scan customer's payment receipt</p>
+
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -129,17 +128,8 @@ export default function ScreenshotVerifyPage() {
                 className="border-2 border-dashed border-surface-600 rounded-xl p-10 text-center cursor-pointer hover:border-cyber-blue hover:bg-surface-800/50 transition-all duration-300"
               >
                 <FileImage className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                <p className="text-sm text-gray-400">Click to upload receipt image</p>
                 <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
               </div>
-              <button
-                onClick={() => cameraRef.current?.click()}
-                className="w-full bg-surface-800 border border-surface-600 rounded-lg py-3 text-sm text-gray-300 hover:text-white hover:border-cyber-blue transition-all flex items-center justify-center gap-2"
-              >
-                <Camera className="w-4 h-4" />
-                Scan with Camera
-              </button>
-              <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleUpload} className="hidden" />
             </div>
           ) : (
             <div className="space-y-3">
@@ -154,23 +144,13 @@ export default function ScreenshotVerifyPage() {
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setOcrResult(null); setError(null); fileRef.current?.click(); }}
-                  className="flex-1 px-4 py-2 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-xs hover:text-white hover:border-surface-500 transition-all"
-                >
-                  Change Image
-                </button>
-                <button
-                  onClick={() => { setOcrResult(null); setError(null); cameraRef.current?.click(); }}
-                  className="flex-1 px-4 py-2 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-xs hover:text-white hover:border-cyber-blue transition-all flex items-center justify-center gap-1"
-                >
-                  <Camera className="w-3 h-3" />
-                  Camera
-                </button>
-              </div>
+              <button
+                onClick={() => { setOcrResult(null); setError(null); fileRef.current?.click(); }}
+                className="w-full px-4 py-2 bg-surface-800 border border-surface-600 text-gray-400 rounded-lg text-xs hover:text-white hover:border-surface-500 transition-all"
+              >
+                Change Image
+              </button>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
-              <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleUpload} className="hidden" />
             </div>
           )}
 
@@ -286,19 +266,11 @@ export default function ScreenshotVerifyPage() {
                   <>
                     <CheckCircle2 className="w-10 h-10 text-cyber-green mx-auto mb-2" />
                     <h3 className="text-lg font-bold text-cyber-green">Payment Verified</h3>
-                    <p className="text-xs text-gray-400 mt-1 font-mono">
-                      Transaction ID and amount match server records
-                    </p>
                   </>
                 ) : (
                   <>
                     <XCircle className="w-10 h-10 text-cyber-red mx-auto mb-2" />
                     <h3 className="text-lg font-bold text-cyber-red">Mismatch Detected</h3>
-                    <p className="text-xs text-gray-400 mt-1 font-mono">
-                      {!ocrResult.customerName
-                        ? 'Transaction ID not found in server records'
-                        : 'Amount does not match the server record'}
-                    </p>
                   </>
                 )}
               </div>
@@ -309,9 +281,8 @@ export default function ScreenshotVerifyPage() {
               <p className="text-sm text-cyber-blue font-mono">Verifying...</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-600 space-y-2">
+            <div className="flex flex-col items-center justify-center py-12 text-gray-600">
               <ScanLine className="w-12 h-12 opacity-30" />
-              <p className="text-sm text-gray-400">Results will appear here</p>
             </div>
           )}
         </div>
