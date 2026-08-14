@@ -10,7 +10,6 @@ import TransactionHistoryPage from './pages/TransactionHistoryPage';
 import ScreenshotVerifyPage from './pages/ScreenshotVerifyPage';
 import FraudMonitoringPage from './pages/FraudMonitoringPage';
 import MyQRCodesPage from './pages/MyQRCodesPage';
-import EvaluationModePage from './pages/EvaluationModePage';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -65,7 +64,6 @@ export default function App() {
             <Route path="/screenshot-verify" element={<ScreenshotVerifyPage />} />
             <Route path="/fraud-alerts" element={<FraudMonitoringPage />} />
             <Route path="/my-qr-codes" element={<MyQRCodesPage />} />
-            <Route path="/evaluation" element={<EvaluationModePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

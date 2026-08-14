@@ -61,8 +61,8 @@ export default function MyQRCodesPage() {
   const [error, setError] = useState<string | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [qrRes, txRes] = await Promise.all([
       supabase
         .from('qr_codes')
@@ -84,6 +84,25 @@ export default function MyQRCodesPage() {
 
   useEffect(() => {
     loadData();
+
+    const txChannel = supabase
+      .channel('my-qr-tx-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
+        loadData(true);
+      })
+      .subscribe();
+
+    const qrChannel = supabase
+      .channel('my-qr-code-changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'qr_codes' }, () => {
+        loadData(true);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(txChannel);
+      supabase.removeChannel(qrChannel);
+    };
   }, [loadData]);
 
   const handleCancel = async (qr: QRRow) => {
