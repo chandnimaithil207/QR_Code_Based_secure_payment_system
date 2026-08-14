@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { QrCode, Download, Copy, Check, Clock, Hash, User, DollarSign, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+import { QrCode, Download, Copy, Check, Clock, Hash, User, IndianRupee, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 import ProductPresetsManager from '../components/ProductPresetsManager';
@@ -174,9 +174,9 @@ export default function GenerateQRPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount ($)</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount (₹)</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="number"
                     step="0.01"
@@ -255,11 +255,11 @@ export default function GenerateQRPage() {
 
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-3.5 h-3.5 text-cyber-green" />
+                    <IndianRupee className="w-3.5 h-3.5 text-cyber-green" />
                     <span className="text-xs text-gray-400">Amount</span>
                   </div>
                   <span className="text-sm font-mono text-cyber-green">
-                    ${qrData.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ₹{qrData.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
 

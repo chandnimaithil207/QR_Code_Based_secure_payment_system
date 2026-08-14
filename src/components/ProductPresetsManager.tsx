@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, Plus, Trash2, Edit2, Check, X, Loader2, AlertCircle, DollarSign } from 'lucide-react';
+import { Package, Plus, Trash2, Edit2, Check, X, Loader2, AlertCircle, IndianRupee } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
 
@@ -174,7 +174,7 @@ export default function ProductPresetsManager({ onSelect }: Props) {
           />
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+              <IndianRupee className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
               <input
                 type="number"
                 step="0.01"
@@ -231,7 +231,7 @@ export default function ProductPresetsManager({ onSelect }: Props) {
                     className="flex-1 bg-surface-700 border border-surface-600 rounded px-2 py-1 text-xs text-white"
                   />
                   <div className="relative w-20">
-                    <DollarSign className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500" />
+                    <IndianRupee className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500" />
                     <input
                       type="number"
                       step="0.01"
@@ -264,7 +264,7 @@ export default function ProductPresetsManager({ onSelect }: Props) {
                       )}
                     </div>
                     <span className="text-sm font-mono text-cyber-green">
-                      ${preset.amount.toFixed(2)}
+                      ₹{preset.amount.toFixed(2)}
                     </span>
                   </button>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CreditCard, CheckCircle2, Hash, DollarSign, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Image as ImageIcon, CloudOff, CloudUpload } from 'lucide-react';
+import { CreditCard, CheckCircle2, Hash, IndianRupee, User, Loader2, AlertCircle, XCircle, ScanLine, ArrowRight, Image as ImageIcon, CloudOff, CloudUpload } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { QRData } from '../types';
 
@@ -461,11 +461,11 @@ export default function CustomerPaymentPage() {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-3.5 h-3.5 text-cyber-green" />
+                    <IndianRupee className="w-3.5 h-3.5 text-cyber-green" />
                     <span className="text-xs text-gray-400">Amount Due</span>
                   </div>
                   <span className="text-lg font-bold text-cyber-green font-mono">
-                    ${qrData.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ₹{qrData.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
@@ -503,7 +503,7 @@ export default function CustomerPaymentPage() {
                 className="w-full bg-gradient-to-r from-cyber-green to-cyber-green-dark hover:from-cyber-green-light hover:to-cyber-green text-surface-950 font-semibold py-3 rounded-lg text-sm transition-all duration-200 hover:shadow-lg hover:shadow-cyber-green/40 flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-4 h-4" />
-                Pay Now — ${qrData.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                Pay Now — ₹{qrData.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </button>
             </>
           )}
@@ -530,7 +530,7 @@ export default function CustomerPaymentPage() {
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">
                   <span className="text-xs text-gray-400">Amount Paid</span>
                   <span className="text-sm font-mono text-cyber-green">
-                    ${result.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    ₹{result.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-surface-800 rounded-lg">

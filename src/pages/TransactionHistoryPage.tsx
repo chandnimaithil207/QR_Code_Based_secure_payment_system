@@ -209,7 +209,7 @@ export default function TransactionHistoryPage() {
                       {row.customerName ?? <span className="text-gray-600 italic">—</span>}
                     </td>
                     <td className="px-4 py-3 font-mono text-white">
-                      ${row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ₹{row.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-4 py-3"><StatusPill status={row.status} /></td>
                     <td className="px-4 py-3 text-gray-500 font-mono text-xs">

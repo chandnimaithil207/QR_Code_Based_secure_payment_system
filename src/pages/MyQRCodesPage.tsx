@@ -253,7 +253,7 @@ export default function MyQRCodesPage() {
                       <td className="px-4 py-3 font-mono text-cyber-blue">{qr.order_id}</td>
                       <td className="px-4 py-3 text-gray-300">{qr.merchant_name}</td>
                       <td className="px-4 py-3 font-mono text-white">
-                        ${Number(qr.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ₹{Number(qr.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3 text-gray-400 font-mono text-xs">
                         {new Date(qr.created_at).toLocaleString('en-US')}
@@ -339,7 +339,7 @@ export default function MyQRCodesPage() {
               <div className="flex items-center justify-between p-2.5 bg-surface-800 rounded-lg">
                 <span className="text-xs text-gray-400">Amount</span>
                 <span className="text-sm font-mono text-cyber-green">
-                  ${Number(reopenQR.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  ₹{Number(reopenQR.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between p-2.5 bg-surface-800 rounded-lg">

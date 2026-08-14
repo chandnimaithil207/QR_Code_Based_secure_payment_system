@@ -86,10 +86,10 @@ export function extractTransactionDetails(text: string): OCRExtractResult {
   }
 
   const amountPatterns = [
-    /\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
-    /Amount[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
-    /Total[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
-    /Paid[:\s]*\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+    /₹\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+    /Amount[:\s]*₹?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+    /Total[:\s]*₹?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+    /Paid[:\s]*₹?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
     /(\d{1,3}(?:,\d{3})?\.\d{2})\s*(?:USD|INR)?/i,
   ];
 
@@ -107,7 +107,7 @@ export function extractTransactionDetails(text: string): OCRExtractResult {
 
   return {
     transactionId: foundTxn,
-    amount: foundAmount ? `$${foundAmount}` : '',
+    amount: foundAmount ? `₹${foundAmount}` : '',
   };
 }
 
@@ -115,7 +115,7 @@ export async function verifyAgainstDatabase(
   transactionId: string,
   submittedAmount: string
 ): Promise<VerificationResult> {
-  const cleanAmount = submittedAmount.replace(/[$,\s]/g, '');
+  const cleanAmount = submittedAmount.replace(/[₹$,\s]/g, '');
   const parsedAmount = parseFloat(cleanAmount);
 
   const { data: tx, error: lookupError } = await supabase
@@ -139,7 +139,7 @@ export async function verifyAgainstDatabase(
     return {
       transactionId: transactionId.trim(),
       amount: submittedAmount.trim(),
-      date: new Date().toLocaleDateString('en-US'),
+      date: new Date().toLocaleDateString('en-IN'),
       customerName: null,
       verified: false,
       status: 'not_found',
@@ -158,8 +158,8 @@ export async function verifyAgainstDatabase(
 
   return {
     transactionId: tx.transaction_id,
-    amount: Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }),
-    date: new Date(tx.created_at).toLocaleString('en-US'),
+    amount: Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+    date: new Date(tx.created_at).toLocaleString('en-IN'),
     customerName: tx.customer_name,
     verified: matched,
     status: matched ? 'verified' : 'mismatch',

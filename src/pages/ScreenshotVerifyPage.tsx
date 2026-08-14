@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, DollarSign, User, Loader2, Wand2, Camera } from 'lucide-react';
+import { Upload, ScanLine, CheckCircle2, XCircle, FileImage, Hash, IndianRupee, User, Loader2, Wand2, Camera } from 'lucide-react';
 import { runOCR, extractTransactionDetails, verifyAgainstDatabase } from '../lib/ocrPipeline';
 import type { OCRResult } from '../types';
 
@@ -202,12 +202,12 @@ export default function ScreenshotVerifyPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount Paid</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="text"
                     value={submittedAmount}
                     onChange={e => setSubmittedAmount(e.target.value)}
-                    placeholder="$0.00"
+                    placeholder="₹0.00"
                     className="w-full bg-surface-800 border border-surface-600 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyber-blue focus:ring-2 focus:ring-cyber-blue/30 transition-all font-mono"
                   />
                 </div>
@@ -259,10 +259,10 @@ export default function ScreenshotVerifyPage() {
                 </div>
                 <div className="p-3 bg-surface-800 rounded-lg flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-3.5 h-3.5 text-cyber-green" />
+                    <IndianRupee className="w-3.5 h-3.5 text-cyber-green" />
                     <span className="text-xs text-gray-400">Amount (server)</span>
                   </div>
-                  <span className="text-sm font-mono text-white">${ocrResult.amount}</span>
+                  <span className="text-sm font-mono text-white">₹{ocrResult.amount}</span>
                 </div>
                 <div className="p-3 bg-surface-800 rounded-lg flex items-center justify-between">
                   <div className="flex items-center gap-2">

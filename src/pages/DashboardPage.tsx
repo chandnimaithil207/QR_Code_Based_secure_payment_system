@@ -179,7 +179,7 @@ export default function DashboardPage() {
                   <td className="px-4 py-3 font-mono text-cyber-blue">{tx.order_id}</td>
                   <td className="px-4 py-3 font-mono text-gray-300">{tx.transaction_id}</td>
                   <td className="px-4 py-3 text-gray-300">{tx.customer_name ?? '—'}</td>
-                  <td className="px-4 py-3 font-mono text-white">${Number(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                  <td className="px-4 py-3 font-mono text-white">₹{Number(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   <td className="px-4 py-3"><StatusBadge status={tx.status} /></td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{new Date(tx.created_at).toLocaleString('en-US')}</td>
                 </tr>
