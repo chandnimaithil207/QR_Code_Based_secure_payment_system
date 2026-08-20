@@ -34,11 +34,43 @@ export function preprocessImage(imageDataUrl: string): Promise<string> {
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let tesseractPromise: Promise<any> | null = null;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function loadTesseract(): Promise<any> {
+  if (tesseractPromise) return tesseractPromise;
+
+  tesseractPromise = new Promise((resolve, reject) => {
+    // If already loaded via npm import, use that
+    if ((window as any).Tesseract) {
+      resolve((window as any).Tesseract);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+    script.onload = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Tesseract = (window as any).Tesseract;
+      if (Tesseract) {
+        resolve(Tesseract);
+      } else {
+        reject(new Error('Tesseract.js loaded but not found on window.'));
+      }
+    };
+    script.onerror = () => reject(new Error('Failed to load OCR engine from CDN.'));
+    document.head.appendChild(script);
+  });
+
+  return tesseractPromise;
+}
+
 export async function runOCR(
   imageDataUrl: string,
   onProgress?: (msg: string) => void
 ): Promise<string> {
-  const Tesseract = await import('tesseract.js');
+  const Tesseract = await loadTesseract();
 
   onProgress?.('Loading OCR engine...');
 
