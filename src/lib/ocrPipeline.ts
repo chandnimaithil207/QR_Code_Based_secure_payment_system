@@ -117,17 +117,23 @@ export function extractTransactionDetails(text: string): OCRExtractResult {
     }
   }
 
+  // OCR often inserts spaces or line breaks around commas in numbers (e.g. "15, 000" or "15,\n000").
+  // Normalize those before matching so the digit-grouping regex can see the full number.
+  const normalizedText = text.replace(/(\d)\s*,\s*(\d)/g, '$1,$2');
+
   const amountPatterns = [
     /₹\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
     /Amount[:\s]*₹?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
     /Total[:\s]*₹?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
     /Paid[:\s]*₹?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
     /(\d{1,3}(?:,\d{3})?\.\d{2})\s*(?:USD|INR)?/i,
+    // Fallback: bare integer with optional comma-grouping (e.g. "15,000")
+    /(\d{1,3}(?:,\d{3})+)\b/,
   ];
 
   let foundAmount = '';
   for (const pattern of amountPatterns) {
-    const match = text.match(pattern);
+    const match = normalizedText.match(pattern);
     if (match) {
       foundAmount = match[1].replace(/,/g, '');
       if (parseFloat(foundAmount) > 0) {
